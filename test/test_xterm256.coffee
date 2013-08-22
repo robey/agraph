@@ -19,3 +19,10 @@ describe "xterm256", ->
     xterm256.nearest_gray(127, 127, 127).should.eql [ 12, Math.sqrt(3) ]
     xterm256.nearest_gray(0, 128, 64).should.eql [ 6, Math.sqrt(68 * 68 + 60 * 60 + 4 * 4) ]
 
+  it "finds the nearest ansi color", ->
+    xterm256.nearest_ansi(0, 0, 0).should.eql [ 0, 0 ]
+    xterm256.nearest_ansi(0xc0, 0xc0, 0xc0).should.eql [ 7, 0 ]
+    xterm256.nearest_ansi(250, 250, 250).should.eql [ 15, Math.sqrt(3 * 5 * 5) ]
+    xterm256.nearest_ansi(64, 32, 200).should.eql [ 12, Math.sqrt(64 * 64 + 32 * 32 + 55 * 55) ]
+
+# 12 = bright blue
