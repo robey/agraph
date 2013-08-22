@@ -1,3 +1,4 @@
+util = require 'util'
 
 COLOR_CUBE = [ 0x00, 0x5f, 0x87, 0xaf, 0xd7, 0xff ]
 GRAY_LINE = [0 ... 24].map (n) -> 8 + 10 * n
@@ -8,15 +9,16 @@ ANSI_LINE = [0 ... 16].map (n) ->
 ANSI_LINE[8] = ANSI_LINE[7]
 ANSI_LINE[7] = [ 0xc0, 0xc0, 0xc0 ]
 
-nearest = (n, table) ->
-  rv = -1
-  distance = 1000
-  for color, index in table
-    d = Math.abs(color - n) 
-    if d < distance
-      distance = d
-      rv = index
-  rv
+cache = {}
+
+# given a hex like "fff" or "cc0033", return the closest matching color in xterm-256 as an index (0 - 255)
+color_from_hex = (hex) ->
+  if cache[hex]? then return cache[hex]
+  realhex = if hex.length == 3 then hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2] else hex
+  [ red, green, blue ] = [ parseInt(realhex[0...2], 16), parseInt(realhex[2...4], 16), parseInt(realhex[4...6], 16) ]
+  index = nearest_color(red, green, blue)
+  cache[hex] = index
+  index
 
 nearest_color = (red, green, blue) ->
   [ cube_index, cube_distance ] = nearest_color_cube(red, green, blue)
@@ -31,26 +33,34 @@ nearest_color = (red, green, blue) ->
 
 # returns [ index into color cube, distance ]
 nearest_color_cube = (red, green, blue) ->
-  redi = nearest(red, COLOR_CUBE)
-  greeni = nearest(green, COLOR_CUBE)
-  bluei = nearest(blue, COLOR_CUBE)
+  redi = find_closest(red, COLOR_CUBE)
+  greeni = find_closest(green, COLOR_CUBE)
+  bluei = find_closest(blue, COLOR_CUBE)
   distance = color_distance(COLOR_CUBE[redi], COLOR_CUBE[greeni], COLOR_CUBE[bluei], red, green, blue)
   [ 36 * redi + 6 * greeni + bluei, distance ]
 
 nearest_gray = (red, green, blue) ->
   gray = (red + green + blue) / 3
-  i = nearest(gray, GRAY_LINE)
+  i = find_closest(gray, GRAY_LINE)
   distance = color_distance(GRAY_LINE[i], GRAY_LINE[i], GRAY_LINE[i], red, green, blue)
   [ i, distance ]
 
 nearest_ansi = (red, green, blue) ->
   distances = ANSI_LINE.map ([ r, g, b ]) -> color_distance(r, g, b, red, green, blue)
-  i = nearest(0, distances)
+  i = find_closest(0, distances)
   [ i, distances[i] ]
 
 color_distance = (red1, green1, blue1, red2, green2, blue2) ->
   Math.sqrt(Math.pow(red1 - red2, 2) + Math.pow(green1 - green2, 2) + Math.pow(blue1 - blue2, 2))
 
+# return the index of the element in list that's closest to n.
+find_closest = (n, list) ->
+  list.map((item, index) -> [ Math.abs(item - n), index ]).sort((a, b) -> a[0] - b[0])[0][1]
+
+
+exports.color_from_hex = color_from_hex
+
+# for unit tests:
 exports.nearest_color = nearest_color
 exports.nearest_color_cube = nearest_color_cube
 exports.nearest_gray = nearest_gray
