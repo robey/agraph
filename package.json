@@ -1,0 +1,34 @@
+{
+  "name": "agraph",
+  "version": "0.1.0",
+  "description": "draw full-color (text-based) ANSI graphs",
+  "keywords": [ "ansi", "graph", "raccoon" ],
+  "author": "Robey Pointer <robeypointer@gmail.com>",
+  "homepage": "https://github.com/robey/agraph",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/robey/agraph.git"
+  },
+  "licenses": [
+    {
+      "type": "Apache License 2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+  ],
+
+  "scripts": {
+    "test": "plz --color -v test"
+  },
+  "dependencies": {
+    "coffee-script": "*"
+  },
+  "devDependencies": {
+    "mocha": "*",
+    "should": "*"
+  },
+  "main": "./lib/packrattle",
+  "files": [
+    "lib",
+    "test"
+  ]
+}
