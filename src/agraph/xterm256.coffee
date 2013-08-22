@@ -1,5 +1,7 @@
 util = require 'util'
 
+COLOR_NAMES = require("./color_names").COLOR_NAMES
+
 COLOR_CUBE = [ 0x00, 0x5f, 0x87, 0xaf, 0xd7, 0xff ]
 GRAY_LINE = [0 ... 24].map (n) -> 8 + 10 * n
 ANSI_LINE = [0 ... 16].map (n) ->
@@ -8,8 +10,17 @@ ANSI_LINE = [0 ... 16].map (n) ->
 # two special cases
 ANSI_LINE[8] = ANSI_LINE[7]
 ANSI_LINE[7] = [ 0xc0, 0xc0, 0xc0 ]
+HEX_RE = /^[\da-fA-F]{3}([\da-fA-F]{3})?$/
 
 cache = {}
+
+# parse a color name, or "#fff" or "#cc0033" into a color index
+get_color = (name) ->
+  if COLOR_NAMES[name]? then name = COLOR_NAMES[name]
+  if name[0] == "#" then name = name[1...]
+  if name.match(HEX_RE) then return color_from_hex(name)
+  # default to gray
+  7
 
 # given a hex like "fff" or "cc0033", return the closest matching color in xterm-256 as an index (0 - 255)
 color_from_hex = (hex) ->
@@ -58,9 +69,10 @@ find_closest = (n, list) ->
   list.map((item, index) -> [ Math.abs(item - n), index ]).sort((a, b) -> a[0] - b[0])[0][1]
 
 
-exports.color_from_hex = color_from_hex
+exports.get_color = get_color
 
 # for unit tests:
+exports.color_from_hex = color_from_hex
 exports.nearest_color = nearest_color
 exports.nearest_color_cube = nearest_color_cube
 exports.nearest_gray = nearest_gray

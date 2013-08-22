@@ -45,3 +45,9 @@ describe "xterm256", ->
       xterm256.color_from_hex("fa2864").should.eql 197 # ff005f
       xterm256.color_from_hex("d9d9d9").should.eql 253 # dadada
       xterm256.color_from_hex("d8d8d8").should.eql 188 # d7d7d7
+
+    it "color by name", ->
+      xterm256.get_color("blue").should.eql 12
+      xterm256.get_color("gray").should.eql 8
+      xterm256.get_color("#000").should.eql 0
+      xterm256.get_color("wuh").should.eql 7
