@@ -51,3 +51,4 @@ describe "xterm256", ->
       xterm256.get_color("gray").should.eql 8
       xterm256.get_color("#000").should.eql 0
       xterm256.get_color("wuh").should.eql 7
+      xterm256.get_color("black").should.eql 0
