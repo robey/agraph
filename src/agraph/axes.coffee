@@ -22,10 +22,3 @@ lpad = (s, n) ->
   lpad("          "[0 ... n - s.length] + s, n)
 
 exports.humanize = humanize
-
-
-# 14, 17
-# = 250.6, 304.3
-
-# 10, 14
-# = 179
