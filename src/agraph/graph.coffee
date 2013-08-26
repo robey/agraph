@@ -4,34 +4,79 @@
 # the x range must contain at least 2 values.
 class Dataset
   constructor: (@points) ->
-    @points.sort (a, b) -> a[0] - b[0]
-
+    if Object.prototype.toString.call(@points[0]).match(/Array/)?
+      @points = @points.map ([ x, y ]) -> { x, y }
+    @points.sort (a, b) -> a.x - b.x
+    @last = @points.length - 1
+  
   toString: ->
-    point_strings = @points.map ([ x, y ]) -> "(#{x}, #{y})"
+    point_strings = @points.map (p) -> "(#{p.x}, #{p.y})"
     "Dataset(#{point_strings.join(', ')})"
 
   # turn our N points into 'count' points, anchored on each end, but interpolated in the middle.
   # returns a new Dataset with the new values.
   interpolate_to: (count) ->
-    ratio = (@points.length - 1) / (count - 1)
-    x0 = @points[0][0]
-    delta_x = @points[1][0] - x0
-    new_delta_x = delta_x * ratio
+    if count * 2 <= @points.length then return @compact_to(count)
+    delta_x = (@points[@last].x - @points[0].x) / (count - 1)
     new_points = [ @points[0] ]
     for i in [1 ... count]
-      x = x0 + new_delta_x * i
-      left = Math.max(Math.floor(i * ratio), 0)
-      right = Math.min(Math.ceil(i * ratio), @points.length - 1)
-      [ xleft, yleft ] = @points[left]
-      [ xright, yright ] = @points[right]
-      if (not yleft?) or (not yright?)
-        y = null
-      else if xleft == xright
-        y = yleft
-      else
-        y = yleft + (yright - yleft) * (x - xleft) / (xright - xleft)
-      new_points.push [ x , y ]
+      x = @points[0].x + delta_x * i
+      new_points.push @interpolate_for_x(x)
     new Dataset(new_points)
+
+  # like interpolate, but if we are creating fewer points, we want to compute running averages.
+  compact_to: (count) ->
+    delta_x = (@points[@last].x - @points[0].x) / (count - 1)
+    new_points = [ ]
+    for i in [0 ... count]
+      x = @points[0].x + delta_x * i
+      # first, interpolate Y as it would exist on the left & right edges of our delta_x-width zone.
+      x0 = x - delta_x / 2
+      x1 = x + delta_x / 2
+      [ left0, right0 ] = @fenceposts_for_x(x0)
+      [ left1, right1 ] = @fenceposts_for_x(x1)
+      p_left = @interpolate_for_x(x0, left0, right0)
+      p_right = @interpolate_for_x(x1, left1, right1)
+      # sum the area under the points from p_left to p_right
+      area = 0
+      width = 0
+      for j in [left0 ... right1]
+        p0 = if j == left0 then p_left else @points[j]
+        p1 = if j + 1 == right0 then p_right else @points[j + 1]
+        # area is delta-x * average(p0.y, p1.y)
+        area += (p1.x - p0.x) * (p0.y + p1.y) / 2
+        width += (p1.x - p0.x)
+      new_points.push { x: x, y: area / width }
+    new Dataset(new_points)
+
+  # ----- internals:
+
+  # interpolate a new y value for the given x value
+  interpolate_for_x: (x, left = null, right = null) ->
+    if not left?
+      [ left, right ] = @fenceposts_for_x(x)
+    x = Math.min(Math.max(x, @points[left].x), @points[right].x)
+
+    if (not @points[left].y?) or (not @points[right].y?)
+      y = null
+    else if left == right
+      y = @points[left].y
+    else
+      delta_y = @points[right].y - @points[left].y
+      delta_x = @points[right].x - @points[left].x
+      y = @points[left].y + delta_y * (x - @points[left].x) / delta_x
+    { x, y }
+
+  # figure out the left and right fenceposts for an x
+  fenceposts_for_x: (x) ->
+    ratio = (x - @points[0].x) / (@points[@last].x - @points[0].x)
+    left = Math.max(0, Math.min(@last, Math.floor(ratio * @last)))
+    right = Math.max(0, Math.min(@last, Math.ceil(ratio * @last)))
+    [ left, right ]
+
+
+
+
 
 
 class Graph
