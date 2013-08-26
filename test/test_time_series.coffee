@@ -2,6 +2,29 @@ should = require 'should'
 time_series = require '../src/agraph/time_series'
 inspect = require("util").inspect
 
+describe "DataCollection", ->
+  it "can sort two datasets", ->
+    d = new time_series.DataCollection()
+    d.addPoints("errors", [ [ 0, 1 ], [ 10, 0 ], [ 5, 6 ] ])
+    d.addPoints("hits", [ [ 5, 11 ], [ 10, 12 ], [ 0, 9 ] ])
+    table = d.toTable()
+    table.timestamps.should.eql [ 0, 5, 10 ]
+    table.datasets.should.eql {
+      errors: [ 1, 6, 0 ]
+      hits: [ 9, 11, 12 ]
+    }
+
+  it "can detect missing timestamps", ->
+    d = new time_series.DataCollection()
+    d.addPoints("errors", [ [ 0, 1 ], [ 5, 2 ], [ 15, 6 ] ])
+    d.addPoints("hits", [ [ 5, 11 ], [ 15, 12 ] ])
+    table = d.toTable()
+    table.timestamps.should.eql [ 0, 5, 10, 15 ]
+    table.datasets.should.eql {
+      errors: [ 1, 2, undefined, 6 ]
+      hits: [ undefined, 11, undefined, 12 ]
+    }
+
 describe "time_series", ->
   describe "can interpolate a dataset", ->
     data1 = new time_series.Dataset [ [ 0, 2 ], [ 3, 5 ], [ 6, 8 ] ]

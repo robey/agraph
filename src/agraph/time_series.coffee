@@ -1,5 +1,52 @@
 util = require 'util'
 
+sort_ints = (list) ->
+  list.map((n) -> parseInt(n)).sort((a, b) -> a - b)
+
+class DataCollection
+  constructor: ->
+    # name -> { timestamp: value }
+    @data = {}
+
+  # add data of the form [ [x, y]... ] or [ {x, y}... ]
+  addPoints: (name, points) ->
+    @data[name] or= {}
+    if Object.prototype.toString.call(points[0]).match(/Array/)?
+      for [ ts, y ] in points then @data[name][ts] = y
+    else
+      for p in points then @data[name][p.x] = p.y
+
+  toTable: ->
+    tset = {}
+    for name, points of @data then for ts, v of points then tset[ts] = true
+    timestamps = sort_ints(Object.keys(tset))
+    console.log "so far #{timestamps}"
+    if timestamps.length > 1
+      # calculate smallest interval, and fill in gaps so all intervals are equal.
+      deltas = [1 ... timestamps.length].map (i) -> timestamps[i] - timestamps[i - 1]
+      console.log "deltas #{deltas}"
+      interval = sort_ints(deltas)[0]
+      i = 1
+      while i < timestamps.length
+        if timestamps[i] - timestamps[i - 1] > interval
+          console.log "boo."
+          timestamps.push timestamps[i - 1] + interval
+          timestamps = sort_ints(timestamps)
+        else
+          i += 1
+    names = Object.keys(@data)
+    datasets = {}
+    for name in names then datasets[name] = []
+    for ts in timestamps then for name in names then datasets[name].push @data[name][ts]
+    new DataTable(timestamps, datasets)
+ 
+
+class DataTable
+  # timestamps is a sorted list of time values, at equal intervals.
+  # datasets is { name -> [values...] }, where the values correspond 1-to-1 with the timestamps.
+  constructor: (@timestamps, @datasets) ->
+
+
 # a set of (x, y) points that make up a line to be graphed.
 # the x range must cover the entire graph, but y values of "undefined" (or null) are allowed.
 # the x range must contain at least 2 values.
@@ -90,5 +137,6 @@ class Graph
 
   
 
+exports.DataCollection = DataCollection
 
 exports.Dataset = Dataset
