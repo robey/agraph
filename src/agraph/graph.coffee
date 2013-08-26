@@ -1,3 +1,4 @@
+util = require 'util'
 
 # a set of (x, y) points that make up a line to be graphed.
 # the x range must cover the entire graph, but y values of "undefined" (or null) are allowed.
@@ -40,13 +41,18 @@ class Dataset
       # sum the area under the points from p_left to p_right
       area = 0
       width = 0
+      ok = false
       for j in [left0 ... right1]
         p0 = if j == left0 then p_left else @points[j]
-        p1 = if j + 1 == right0 then p_right else @points[j + 1]
+        p1 = if j + 1 == right1 then p_right else @points[j + 1]
         # area is delta-x * average(p0.y, p1.y)
-        area += (p1.x - p0.x) * (p0.y + p1.y) / 2
+        if p0.y? or p1.y? then ok = true
+        console.log "i=#{i} j=#{j} p0=#{util.inspect(p0)} p1=#{util.inspect(p1)} area=#{area}"
+        area += (p1.x - p0.x) * ((p0.y or 0) + (p1.y or 0)) / 2
+        console.log "  -> area=#{area}"
         width += (p1.x - p0.x)
-      new_points.push { x: x, y: area / width }
+      y = if ok then area / width else null
+      new_points.push { x, y }
     new Dataset(new_points)
 
   # ----- internals:
@@ -78,11 +84,13 @@ class Dataset
 
 
 
+DEFAULT_OPTIONS =
+  scale_to_zero: false
 
 class Graph
-  constructor: (@width, @height) ->
+  constructor: (@width, @height, options) ->
 
-
+  
 
 
 exports.Dataset = Dataset

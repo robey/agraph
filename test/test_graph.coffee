@@ -2,7 +2,6 @@ should = require 'should'
 graph = require '../src/agraph/graph'
 inspect = require("util").inspect
 
-
 describe "graph", ->
   describe "can interpolate a dataset", ->
     data1 = new graph.Dataset [ [ 0, 2 ], [ 3, 5 ], [ 6, 8 ] ]
@@ -11,6 +10,9 @@ describe "graph", ->
     data4 = new graph.Dataset [
       [ 20, 100 ], [ 22, 110 ], [ 24, 130 ], [ 26, 130 ], [ 28, 120 ], [ 30, 150 ],
       [ 32, 140 ], [ 34, 100 ], [ 36, 130 ]
+    ]
+    data5 = new graph.Dataset [
+      [ 20, null ], [ 22, null ], [ 24, null ], [ 26, 90 ], [ 28, null ], [ 30, null ]
     ]
 
     it "one to one", ->
@@ -41,3 +43,7 @@ describe "graph", ->
     it "compacts", ->
       d = data4.compact_to(3)
       d.toString().should.eql "Dataset((20, 112.5), (28, 133.75), (36, 117.5))"
+
+    it "doesn't compact away to nothing", ->
+      d = data5.compact_to(3)
+      d.toString().should.eql "Dataset((20, null), (25, 31.5), (30, null))"
