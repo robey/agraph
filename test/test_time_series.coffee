@@ -1,17 +1,17 @@
 should = require 'should'
-graph = require '../src/agraph/graph'
+time_series = require '../src/agraph/time_series'
 inspect = require("util").inspect
 
-describe "graph", ->
+describe "time_series", ->
   describe "can interpolate a dataset", ->
-    data1 = new graph.Dataset [ [ 0, 2 ], [ 3, 5 ], [ 6, 8 ] ]
-    data2 = new graph.Dataset [ [ 5, 100 ], [ 6, 120 ], [ 7, null ], [ 8, 140 ], [ 9, 160 ] ]
-    data3 = new graph.Dataset [ [ 5, 100 ], [ 8, 106 ], [ 11, 112 ], [ 14, 118 ], [ 17, 124 ] ]
-    data4 = new graph.Dataset [
+    data1 = new time_series.Dataset [ [ 0, 2 ], [ 3, 5 ], [ 6, 8 ] ]
+    data2 = new time_series.Dataset [ [ 5, 100 ], [ 6, 120 ], [ 7, null ], [ 8, 140 ], [ 9, 160 ] ]
+    data3 = new time_series.Dataset [ [ 5, 100 ], [ 8, 106 ], [ 11, 112 ], [ 14, 118 ], [ 17, 124 ] ]
+    data4 = new time_series.Dataset [
       [ 20, 100 ], [ 22, 110 ], [ 24, 130 ], [ 26, 130 ], [ 28, 120 ], [ 30, 150 ],
       [ 32, 140 ], [ 34, 100 ], [ 36, 130 ]
     ]
-    data5 = new graph.Dataset [
+    data5 = new time_series.Dataset [
       [ 20, null ], [ 22, null ], [ 24, null ], [ 26, 90 ], [ 28, null ], [ 30, null ]
     ]
 

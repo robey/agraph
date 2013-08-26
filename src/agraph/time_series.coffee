@@ -47,9 +47,7 @@ class Dataset
         p1 = if j + 1 == right1 then p_right else @points[j + 1]
         # area is delta-x * average(p0.y, p1.y)
         if p0.y? or p1.y? then ok = true
-        console.log "i=#{i} j=#{j} p0=#{util.inspect(p0)} p1=#{util.inspect(p1)} area=#{area}"
         area += (p1.x - p0.x) * ((p0.y or 0) + (p1.y or 0)) / 2
-        console.log "  -> area=#{area}"
         width += (p1.x - p0.x)
       y = if ok then area / width else null
       new_points.push { x, y }
