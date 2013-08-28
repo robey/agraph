@@ -3,6 +3,7 @@ util = require 'util'
 sort_ints = (list) ->
   list.map((n) -> parseInt(n)).sort((a, b) -> a - b)
 
+
 class DataCollection
   constructor: ->
     # name -> { timestamp: value }
@@ -16,20 +17,19 @@ class DataCollection
     else
       for p in points then @data[name][p.x] = p.y
 
+  # normalize all the intervals and fill in blanks ("undefined") for missing data.
+  # end result should be a perfect rectangle of data.
   toTable: ->
     tset = {}
     for name, points of @data then for ts, v of points then tset[ts] = true
     timestamps = sort_ints(Object.keys(tset))
-    console.log "so far #{timestamps}"
     if timestamps.length > 1
       # calculate smallest interval, and fill in gaps so all intervals are equal.
       deltas = [1 ... timestamps.length].map (i) -> timestamps[i] - timestamps[i - 1]
-      console.log "deltas #{deltas}"
       interval = sort_ints(deltas)[0]
       i = 1
       while i < timestamps.length
         if timestamps[i] - timestamps[i - 1] > interval
-          console.log "boo."
           timestamps.push timestamps[i - 1] + interval
           timestamps = sort_ints(timestamps)
         else
@@ -39,94 +39,83 @@ class DataCollection
     for name in names then datasets[name] = []
     for ts in timestamps then for name in names then datasets[name].push @data[name][ts]
     new DataTable(timestamps, datasets)
- 
+
 
 class DataTable
   # timestamps is a sorted list of time values, at equal intervals.
   # datasets is { name -> [values...] }, where the values correspond 1-to-1 with the timestamps.
   constructor: (@timestamps, @datasets) ->
+    @last = @timestamps.length - 1
+    @interval = @timestamps[1] - @timestamps[0]
+    @totalInterval = @interval * @last
 
+  # adjust our current timestamps into N new equally-spaced timestamps covering the same range. the new datasets will
+  # be anchored on each end, but interpolated in the middle. if the datasets are being compressed by a factor of more
+  # than 2, sets of points will be merged by average-area.
+  # returns a new DataTable.
+  toDataPoints: (n) ->
+    new_interval = @totalInterval / (n - 1)
+    new_timestamps = [0 ... n].map (i) => @timestamps[0] + new_interval * i
+    if n * 2 <= @timestamps.length then return @toAveragedDataPoints(n, new_interval, new_timestamps)
+    new_datasets = {}
+    for name of @datasets
+      new_datasets[name] = [ @datasets[name][0] ]
+      for i in [1 ... n]
+        new_datasets[name].push @interpolate(new_timestamps[i], @datasets[name])
+    new DataTable(new_timestamps, new_datasets)
 
-# a set of (x, y) points that make up a line to be graphed.
-# the x range must cover the entire graph, but y values of "undefined" (or null) are allowed.
-# the x range must contain at least 2 values.
-class Dataset
-  constructor: (@points) ->
-    if Object.prototype.toString.call(@points[0]).match(/Array/)?
-      @points = @points.map ([ x, y ]) -> { x, y }
-    @points.sort (a, b) -> a.x - b.x
-    @last = @points.length - 1
-  
-  toString: ->
-    point_strings = @points.map (p) -> "(#{p.x}, #{p.y})"
-    "Dataset(#{point_strings.join(', ')})"
-
-  # turn our N points into 'count' points, anchored on each end, but interpolated in the middle.
-  # returns a new Dataset with the new values.
-  interpolate_to: (count) ->
-    if count * 2 <= @points.length then return @compact_to(count)
-    delta_x = (@points[@last].x - @points[0].x) / (count - 1)
-    new_points = [ @points[0] ]
-    for i in [1 ... count]
-      x = @points[0].x + delta_x * i
-      new_points.push @interpolate_for_x(x)
-    new Dataset(new_points)
-
-  # like interpolate, but if we are creating fewer points, we want to compute running averages.
-  compact_to: (count) ->
-    delta_x = (@points[@last].x - @points[0].x) / (count - 1)
-    new_points = [ ]
-    for i in [0 ... count]
-      x = @points[0].x + delta_x * i
-      # first, interpolate Y as it would exist on the left & right edges of our delta_x-width zone.
-      x0 = x - delta_x / 2
-      x1 = x + delta_x / 2
-      [ left0, right0 ] = @fenceposts_for_x(x0)
-      [ left1, right1 ] = @fenceposts_for_x(x1)
-      p_left = @interpolate_for_x(x0, left0, right0)
-      p_right = @interpolate_for_x(x1, left1, right1)
-      # sum the area under the points from p_left to p_right
-      area = 0
-      width = 0
-      ok = false
-      for j in [left0 ... right1]
-        p0 = if j == left0 then p_left else @points[j]
-        p1 = if j + 1 == right1 then p_right else @points[j + 1]
-        # area is delta-x * average(p0.y, p1.y)
-        if p0.y? or p1.y? then ok = true
-        area += (p1.x - p0.x) * ((p0.y or 0) + (p1.y or 0)) / 2
-        width += (p1.x - p0.x)
-      y = if ok then area / width else null
-      new_points.push { x, y }
-    new Dataset(new_points)
+  toCsv: ->
+    names = Object.keys(@datasets).sort()
+    rv = [ "\# timestamp,#{names.join(',')}" ]
+    for i in [0 ... @timestamps.length]
+      rv.push "#{@timestamps[i]}," + names.map((name) => @datasets[name][i] or "null").join(",")
+    rv.join("\n") + "\n"
 
   # ----- internals:
 
-  # interpolate a new y value for the given x value
-  interpolate_for_x: (x, left = null, right = null) ->
-    if not left?
-      [ left, right ] = @fenceposts_for_x(x)
-    x = Math.min(Math.max(x, @points[left].x), @points[right].x)
+  # like interpolation, but if we are creating fewer points, we want to compute running averages.
+  toAveragedDataPoints: (n, new_interval, new_timestamps) ->
+    new_datasets = {}
+    for name of @datasets
+      new_datasets[name] = []
+    for i in [0 ... n]
+      # find left/right bounding timestamps, and the nearest existing data point on either side of each.
+      constrain = (ts) => Math.min(Math.max(ts, @timestamps[0]), @timestamps[@last])
+      ts_left = constrain(new_timestamps[i] - new_interval / 2)
+      ts_right = constrain(new_timestamps[i] + new_interval / 2)
+      [ left0, left1 ] = @fencepostsFor(ts_left)
+      [ right0, right1 ] = @fencepostsFor(ts_right)
+      for name, dataset of @datasets
+        # first, interpolate Y as it would exist on the bounding timestamps.
+        y_left = @interpolate(ts_left, dataset, left0, left1)
+        y_right = @interpolate(ts_right, dataset, right0, right1)
+        # sum the area under the points from y_left to y_right.
+        # (another way to think of it: compute the weighted average of the points.)
+        # first, the left and right edges:
+        computeArea = (ts0, ts1, y0, y1) -> ((y0 or 0) + (y1 or 0)) / 2 * (ts1 - ts0)
+        area = computeArea(ts_left, @timestamps[left1], y_left, dataset[left1]) +
+          computeArea(@timestamps[right0], ts_right, dataset[right0], y_right)
+        # then, all regular-width intervals in-between:
+        any_exist = false
+        for j in [left1 ... right0]
+          if dataset[j]? or dataset[j + 1]? then any_exist = true
+          area += computeArea(@timestamps[j], @timestamps[j + 1], dataset[j], dataset[j + 1])
+        new_datasets[name].push(if any_exist then area / (ts_right - ts_left) else null)
+    new DataTable(new_timestamps, new_datasets)
 
-    if (not @points[left].y?) or (not @points[right].y?)
-      y = null
-    else if left == right
-      y = @points[left].y
-    else
-      delta_y = @points[right].y - @points[left].y
-      delta_x = @points[right].x - @points[left].x
-      y = @points[left].y + delta_y * (x - @points[left].x) / delta_x
-    { x, y }
+  # interpolate the data point for a new timestamp and an existing dataset
+  interpolate: (ts, dataset, left = null, right = null) ->
+    if not left? then [ left, right ] = @fencepostsFor(ts)
+    if (not dataset[left]?) or (not dataset[right]?) then return null
+    if left == right then return dataset[left]
+    dataset[left] + (dataset[right] - dataset[left]) * (ts - @timestamps[left]) / @interval
 
-  # figure out the left and right fenceposts for an x
-  fenceposts_for_x: (x) ->
-    ratio = (x - @points[0].x) / (@points[@last].x - @points[0].x)
+  # figure out the left and right fenceposts for a timestamp
+  fencepostsFor: (t) ->
+    ratio = (t - @timestamps[0]) / @totalInterval
     left = Math.max(0, Math.min(@last, Math.floor(ratio * @last)))
     right = Math.max(0, Math.min(@last, Math.ceil(ratio * @last)))
     [ left, right ]
-
-
-
 
 
 DEFAULT_OPTIONS =
@@ -138,5 +127,4 @@ class Graph
   
 
 exports.DataCollection = DataCollection
-
-exports.Dataset = Dataset
+exports.DataTable = DataTable
