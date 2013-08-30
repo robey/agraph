@@ -219,34 +219,10 @@ paint = (dataTable, inOptions) ->
   for x in [0 ... graph.width] then canvas.at(x + X_MARGIN, graph.height).write("-")
   canvas.at(X_MARGIN - 1, graph.height).write("+")
 
-  # y axis
+  # x/y axis labels
   canvas.color(options.labelColor)
-  yLabels = graph.yValues().map (x) -> axes.humanize(x)
-  lastIndex = -1
-  lastLabel = ""
-  for y in [0 ... graph.height]
-    label = yLabels[graph.height - y - 1]
-    if not (lastIndex == y - 1 or label == lastLabel)
-      canvas.at(0, y).write(label)
-      lastIndex = y
-      lastLabel = label
-
-  # x axis
-  x = 0
-  scaled = graph.scaled
-  while x < graph.width - 4
-    console.log "#{scaled.timestamps[x]}"
-    label = axes.roundedTime(scaled.timestamps[x], scaled.interval, scaled.totalInterval)
-    if label?
-      left_edge = x
-      while axes.roundedTime(scaled.timestamps[x + 1], scaled.interval, scaled.totalInterval) == label
-        x += 1
-      right_edge = x
-      console.log "#{left_edge}/#{right_edge}"
-      canvas.at(Math.round((right_edge + left_edge) / 2) + X_MARGIN - 2, graph.height + 1).write(label)
-      x += 6
-    else
-      x += 1
+  axes.drawXLabels(canvas, graph.scaled, X_MARGIN, graph.height + 1, graph.width)
+  axes.drawYLabels(canvas, 0, 0, graph.height, graph.yValues())
 
   canvas
 

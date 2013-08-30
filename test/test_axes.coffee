@@ -28,7 +28,7 @@ describe "axes", ->
 
   it "roundedTime", ->
     ts1 = new Date("Fri Aug 30 2013 01:00:00").getTime() / 1000
-    axes.workingGranularity(20 * 60).should.eql 60
+    axes.granularity(20 * 60).should.eql 60
     axes.roundedTime(ts1, 60, 20 * 60).should.eql "01:00"
     axes.roundedTime(ts1 + 29, 60, 20 * 60).should.eql "01:00"
     (axes.roundedTime(ts1 + 29, 30, 20 * 60)?).should.eql false

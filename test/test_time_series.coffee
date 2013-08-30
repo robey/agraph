@@ -88,8 +88,3 @@ describe "GridGraph", ->
     g.top.should.eql 127
     g.bottom.should.eql 97
     g.interval.should.eql 3
-
-    g.draw()
-    console.log g.toString()
-
-
