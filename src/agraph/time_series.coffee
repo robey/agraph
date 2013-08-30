@@ -71,6 +71,12 @@ class DataTable
       rv.push "#{@timestamps[i]}," + names.map((name) => @datasets[name][i] or "null").join(",")
     rv.join("\n") + "\n"
 
+  minimum: ->
+    Math.min.apply(Math, (for name, dataset of @datasets then Math.min.apply(Math, dataset)))
+
+  maximum: ->
+    Math.max.apply(Math, (for name, dataset of @datasets then Math.max.apply(Math, dataset)))
+
   # ----- internals:
 
   # like interpolation, but if we are creating fewer points, we want to compute running averages.
@@ -119,12 +125,93 @@ class DataTable
 
 
 DEFAULT_OPTIONS =
-  scale_to_zero: false
+  width: 70
+  height: 20
+  scale_to_zero: false  # FIXME
+  fill: true
+  # for painting to canvas:
+  colors: [ "red", "blue", "orange", "green", "purple", "cyan" ]
+  backgroundColor: "555"
+  legos: false
+  xOffset: 7
+  yOffset: 0
 
-class Graph
-  constructor: (@width, @height, options) ->
+class GridGraph
+  constructor: (@dataTable, options = {}) ->
+    @options = {}
+    for k, v of DEFAULT_OPTIONS then @options[k] = v
+    for k, v of options then @options[k] = v
+    @width = options.width
+    @height = options.height
+    # (y, x) containing the dataset name or null
+    @grid = new Array(@width * @height)
+
+  prepare: ->
+    return if @scaled?
+    @scaled = @dataTable.toDataPoints(@width)
+    @bottom = if @options.scale_to_zero then 0 else @scaled.minimum()
+    @top = @scaled.maximum()
+    if @height > 8
+      # leave a 1-unit gap at the top & bottom
+      @interval = (@top - @bottom) / (@height - 3)
+      @top += @interval
+      @bottom -= @interval
+    else
+      @interval = (@top - @bottom) / (@height - 1)
+    console.log "top=#{@top}, bottom=#{@bottom}, interval=#{@interval}"
+
+  draw: ->
+    @prepare()
+    for name in @sortedNames()
+      dataset = @scaled.datasets[name]
+      console.log util.inspect(name)
+      for x in [0 ... @width]
+        y = Math.round((dataset[x] - @bottom) / @interval)
+        console.log "x = #{x} / y = #{dataset[x]}, #{y}, #{y * @height + x}"
+        @put(x, y, name)
+        if @options.fill then for yy in [0 ... y] then @put(x, yy, name)
+
+  put: (x, y, value) -> @grid[y * @width + x] = value
+  get: (x, y) -> @grid[y * @width + x]
+
+  toString: ->
+    lines = for y in [0 ... @height]
+      trueY = @height - y - 1
+      (for x in [0 ... @width] then (if @get(x, trueY)? then "*" else "_")).join("")
+    lines.join("\n") + "\n"
+
+  sortedNames: ->
+    # FIXME: do the ones with max values first, then so on.
+    @prepare()
+    Object.keys(@scaled.datasets).sort()
+
+
+paintToCanvas = (canvas, dataTable, inOptions) ->
+  options = {}
+  for k, v of DEFAULT_OPTIONS then options[k] = v
+  for k, v of inOptions then options[k] = v
+  graph = new GridGraph(dataTable, options)
+  graph.draw()
+  names = graph.sortedNames()
+  canvas.backgroundColor(options.backgroundColor)
+  if options.legos
+    # help
+  else
+    for y in [0 ... graph.height] then for x in [0 ... graph.width]
+      trueY = graph.height - y - 1
+      console.log "trueY=#{trueY}"
+      canvas.at(x + options.xOffset, trueY + options.yOffset)
+      value = graph.get(x, y)
+      if value?
+        color = options.colors[names.indexOf(value) % options.colors.length]
+        canvas.color(color).write("\u2588")
+      else
+        canvas.write(" ")
+
+exports.paintToCanvas = paintToCanvas
 
   
 
 exports.DataCollection = DataCollection
 exports.DataTable = DataTable
+exports.GridGraph = GridGraph
