@@ -1,4 +1,6 @@
 util = require 'util'
+axes = require "./axes"
+canvas = require "./canvas"
 
 sort_ints = (list) ->
   list.map((n) -> parseInt(n)).sort((a, b) -> a - b)
@@ -131,10 +133,9 @@ DEFAULT_OPTIONS =
   fill: true
   # for painting to canvas:
   colors: [ "red", "blue", "orange", "green", "purple", "cyan" ]
-  backgroundColor: "555"
-  legos: false
-  xOffset: 7
-  yOffset: 0
+  backgroundColor: "333"
+  gridColor: "555"
+  labelColor: "077"
 
 class GridGraph
   constructor: (@dataTable, options = {}) ->
@@ -160,7 +161,6 @@ class GridGraph
       @bottom -= @interval
     else
       @interval = (@top - @bottom) / (@height - 1)
-    console.log "top=#{@top}, bottom=#{@bottom}, interval=#{@interval}"
 
   # run each grid element through a transformation function.
   map: (f) ->
@@ -170,10 +170,8 @@ class GridGraph
     @prepare()
     for name in @sortedNames()
       dataset = @scaled.datasets[name]
-      console.log util.inspect(name)
       for x in [0 ... @width]
         y = Math.round((dataset[x] - @bottom) / @interval)
-        console.log "x = #{x} / y = #{dataset[x]}, #{y}, #{y * @height + x}"
         @put(x, y, name)
         if @options.fill then for yy in [0 ... y] then @put(x, yy, name)
 
@@ -181,6 +179,9 @@ class GridGraph
 
   # get uses y with 0 at the bottom left
   get: (x, y) -> @grid[(@height - y - 1) * @width + x]
+
+  yValues: ->
+    [0 ... @height].map (i) => @bottom + i * @interval
 
   toString: ->
     lines = for y in [0 ... @height]
@@ -193,23 +194,63 @@ class GridGraph
     Object.keys(@scaled.datasets).sort()
 
 
-paintToCanvas = (canvas, dataTable, inOptions) ->
+X_MARGIN = 7
+Y_MARGIN = 2
+
+paint = (dataTable, inOptions) ->
   options = {}
   for k, v of DEFAULT_OPTIONS then options[k] = v
   for k, v of inOptions then options[k] = v
+
   graph = new GridGraph(dataTable, options)
+  canvas = new canvas.Canvas(graph.width + X_MARGIN, graph.height + Y_MARGIN)
+  canvas.fillBackground(options.backgroundColor)
+
   graph.draw()
   names = graph.sortedNames()
-  canvas.backgroundColor(options.backgroundColor)
-  graph.map (x) -> if x? then options.colors[names.indexOf(x) % options.colors.length] else options.backgroundColor
-  if options.legos or true
-    for y in [0 ... graph.height] by 2 then for x in [0 ... graph.width]
-      canvas.at(x + options.xOffset, (y / 2) + options.yOffset).color(graph.get(x, y + 1)).backgroundColor(graph.get(x, y)).write("\u2584")
-  else
-    for y in [0 ... graph.height] then for x in [0 ... graph.width]
-      canvas.at(x + options.xOffset, y + options.yOffset).backgroundColor(graph.get(x, y)).write("\u2580")
+  graph.map (x) -> if x? then options.colors[names.indexOf(x) % options.colors.length] else null
+  for y in [0 ... graph.height] then for x in [0 ... graph.width]
+    color = graph.get(x, y)
+    if color? then canvas.at(x + X_MARGIN, y).backgroundColor(color).write(" ")
 
-exports.paintToCanvas = paintToCanvas
+  # borders
+  canvas.backgroundColor(options.backgroundColor).color(options.gridColor)
+  for y in [0 ... graph.height] then canvas.at(X_MARGIN - 1, y).write("|")
+  for x in [0 ... graph.width] then canvas.at(x + X_MARGIN, graph.height).write("-")
+  canvas.at(X_MARGIN - 1, graph.height).write("+")
+
+  # y axis
+  canvas.color(options.labelColor)
+  yLabels = graph.yValues().map (x) -> axes.humanize(x)
+  lastIndex = -1
+  lastLabel = ""
+  for y in [0 ... graph.height]
+    label = yLabels[graph.height - y - 1]
+    if not (lastIndex == y - 1 or label == lastLabel)
+      canvas.at(0, y).write(label)
+      lastIndex = y
+      lastLabel = label
+
+  # x axis
+  x = 0
+  scaled = graph.scaled
+  while x < graph.width - 4
+    console.log "#{scaled.timestamps[x]}"
+    label = axes.roundedTime(scaled.timestamps[x], scaled.interval, scaled.totalInterval)
+    if label?
+      left_edge = x
+      while axes.roundedTime(scaled.timestamps[x + 1], scaled.interval, scaled.totalInterval) == label
+        x += 1
+      right_edge = x
+      console.log "#{left_edge}/#{right_edge}"
+      canvas.at(Math.round((right_edge + left_edge) / 2) + X_MARGIN - 2, graph.height + 1).write(label)
+      x += 6
+    else
+      x += 1
+
+  canvas
+
+exports.paint = paint
 
   
 

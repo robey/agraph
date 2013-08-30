@@ -15,7 +15,7 @@ class Canvas
     @grid = new Array(@width * @height)
     @fg = xterm256.get_color("white")
     @bg = xterm256.get_color("black")
-    [0 ... @width * @height].map (i) => @puti(i, @bg, @fg, SPACE)
+    @fillBackground("black")
     @y = 0
     @x = 0
 
@@ -44,6 +44,10 @@ class Canvas
         if @y >= @height
           @y = 0
     @
+
+  fillBackground: (color) ->
+    @backgroundColor(color)
+    [0 ... @width * @height].map (i) => @puti(i, @bg, @fg, SPACE)
 
   toStrings: ->
     [0 ... @height].map (y) =>

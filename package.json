@@ -20,9 +20,10 @@
     "test": "plz --color -v test"
   },
   "dependencies": {
-    "coffee-script": "*"
+    "strftime": "*"
   },
   "devDependencies": {
+    "coffee-script": "*",
     "mocha": "*",
     "should": "*"
   },

@@ -1,3 +1,4 @@
+strftime = require 'strftime'
 
 HUMAN_LABELS = "afpnum KMGTPE"
 
@@ -22,3 +23,41 @@ lpad = (s, n) ->
   lpad("          "[0 ... n - s.length] + s, n)
 
 exports.humanize = humanize
+
+
+
+minutes = 60
+hours = 60 * minutes
+
+# for a given total interval, find a good granularity to round to.
+workingGranularity = (totalInterval) ->
+  if totalInterval >= 24 * hours
+    4 * hours
+  else if totalInterval > 8 * hours
+    1 * hours
+  else if totalInterval > 2 * hours
+    15 * minutes
+  else if totalInterval > 30 * minutes
+    5 * minutes
+  else
+    1 * minutes
+
+# if the timestamp can be rounded to a nice rounded time, return it. otherwise, null.
+roundedTime = (timestamp, interval, totalInterval) ->
+  minTime = timestamp - (interval / 2)
+  maxTime = timestamp + (interval / 2)
+  granularity = workingGranularity(totalInterval)
+  lowTime = Math.round(timestamp / granularity) * granularity
+  hiTime = lowTime + granularity
+  ts = if lowTime >= minTime
+    lowTime
+  else if hiTime <= maxTime
+    hiTime
+  else
+    null
+  if not ts? then return null
+  strftime.strftime((if totalInterval >= 48 * hours then "%m/%d" else "%H:%M"), new Date(ts * 1000))
+
+exports.workingGranularity = workingGranularity
+exports.roundedTime = roundedTime
+
