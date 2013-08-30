@@ -145,6 +145,8 @@ class GridGraph
     @height = options.height
     # (y, x) containing the dataset name or null
     @grid = new Array(@width * @height)
+    # force all elements to be there. js has weird "map" characteristics otherwise:
+    for i in [0 ... @width * @height] then @grid[i] = null
 
   prepare: ->
     return if @scaled?
@@ -160,6 +162,10 @@ class GridGraph
       @interval = (@top - @bottom) / (@height - 1)
     console.log "top=#{@top}, bottom=#{@bottom}, interval=#{@interval}"
 
+  # run each grid element through a transformation function.
+  map: (f) ->
+    @grid = @grid.map(f)
+
   draw: ->
     @prepare()
     for name in @sortedNames()
@@ -172,12 +178,13 @@ class GridGraph
         if @options.fill then for yy in [0 ... y] then @put(x, yy, name)
 
   put: (x, y, value) -> @grid[y * @width + x] = value
-  get: (x, y) -> @grid[y * @width + x]
+
+  # get uses y with 0 at the bottom left
+  get: (x, y) -> @grid[(@height - y - 1) * @width + x]
 
   toString: ->
     lines = for y in [0 ... @height]
-      trueY = @height - y - 1
-      (for x in [0 ... @width] then (if @get(x, trueY)? then "*" else "_")).join("")
+      (for x in [0 ... @width] then (if @get(x, y)? then "*" else "_")).join("")
     lines.join("\n") + "\n"
 
   sortedNames: ->
@@ -194,19 +201,13 @@ paintToCanvas = (canvas, dataTable, inOptions) ->
   graph.draw()
   names = graph.sortedNames()
   canvas.backgroundColor(options.backgroundColor)
-  if options.legos
-    # help
+  graph.map (x) -> if x? then options.colors[names.indexOf(x) % options.colors.length] else options.backgroundColor
+  if options.legos or true
+    for y in [0 ... graph.height] by 2 then for x in [0 ... graph.width]
+      canvas.at(x + options.xOffset, (y / 2) + options.yOffset).color(graph.get(x, y + 1)).backgroundColor(graph.get(x, y)).write("\u2584")
   else
     for y in [0 ... graph.height] then for x in [0 ... graph.width]
-      trueY = graph.height - y - 1
-      console.log "trueY=#{trueY}"
-      canvas.at(x + options.xOffset, trueY + options.yOffset)
-      value = graph.get(x, y)
-      if value?
-        color = options.colors[names.indexOf(value) % options.colors.length]
-        canvas.color(color).write("\u2588")
-      else
-        canvas.write(" ")
+      canvas.at(x + options.xOffset, y + options.yOffset).backgroundColor(graph.get(x, y)).write("\u2580")
 
 exports.paintToCanvas = paintToCanvas
 
