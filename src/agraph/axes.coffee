@@ -10,12 +10,15 @@ drawYLabels = (canvas, x, yOffset, height, yValues) ->
   yLabels = yValues.map(humanize)
   lastIndex = -1
   lastLabel = ""
+  labelsAt = []
   for y in [0 ... height]
     label = yLabels[height - y - 1]
     if not (lastIndex == y - 1 or label == lastLabel)
       canvas.at(x, y + yOffset).write(label)
       lastIndex = y
       lastLabel = label
+      labelsAt.push y
+  labelsAt
 
 drawXLabels = (canvas, dataTable, xOffset, y, width) ->
   x = 0
@@ -26,7 +29,8 @@ drawXLabels = (canvas, dataTable, xOffset, y, width) ->
       while roundedTime(dataTable.timestamps[x + 1], dataTable.interval, dataTable.totalInterval) == label
         x += 1
       rightEdge = x
-      canvas.at(Math.round((rightEdge + leftEdge) / 2) + xOffset - 2, y).write(label)
+      colonLocation = Math.round((rightEdge + leftEdge) / 2)
+      canvas.at(colonLocation + xOffset - 2, y).write(label)
       x += 6
     else
       x += 1
