@@ -22,6 +22,18 @@ timeGranularityFor = (interval) ->
   else
     1 * MINUTES
 
+# given a set of keys, and a function for mapping a key to a value, find the
+# key that maps to the maximum value.
+maxByKey = (keys, f) ->
+  max = null
+  winner = null
+  for key in keys
+    v = f(key)
+    if (not winner?) or (v > max)
+      winner = key
+      max = v
+  winner
+
 
 class DataCollection
   constructor: ->
@@ -106,6 +118,22 @@ class DataTable
       lowTime = Math.floor(ts / g) * g
       hiTime = lowTime + g
       if lowTime >= minTime then lowTime - ts else (if hiTime <= maxTime then hiTime - ts else null)
+
+  # list the dataset names in the order they should be drawn (with the highest-valued line first)
+  sortedNames: ->
+    names = []
+    datasets = {}
+    for k, v of @datasets then datasets[k] = v
+    while Object.keys(datasets).length > 0
+      # find the dataset that has the highest value most often.
+      scores = {}
+      for name of datasets then scores[name] = 0
+      for i in [0 ... @timestamps.length]
+        scores[maxByKey(Object.keys(datasets), (name) -> datasets[name][i])] += 1
+      winner = maxByKey(Object.keys(scores), (name) -> scores[name])
+      names.push winner
+      delete datasets[winner]
+    names
 
   # ----- internals:
 

@@ -39,7 +39,7 @@ class GridGraph
 
   draw: ->
     @prepare()
-    for name in @sortedNames()
+    for name in @scaled.sortedNames()
       dataset = @scaled.datasets[name]
       for x in [0 ... @width]
         y = Math.round((dataset[x] - @bottom) / @interval)
@@ -58,11 +58,6 @@ class GridGraph
     lines = for y in [0 ... @height]
       (for x in [0 ... @width] then (if @get(x, y)? then "*" else "_")).join("")
     lines.join("\n") + "\n"
-
-  sortedNames: ->
-    # FIXME: do the ones with max values first, then so on.
-    @prepare()
-    Object.keys(@scaled.datasets).sort()
 
 
 exports.GridGraph = GridGraph

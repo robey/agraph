@@ -87,3 +87,12 @@ describe "DataTable", ->
     d = new time_series.DataTable([ 1900, 2000, 2100, 2200, 2300, 2400, 2500 ])
     d.roundedTimes().should.eql [ -40, -20, 0, -40, -20, 0, -40 ]
 
+  it "can sort names", ->
+    d = new time_series.DataTable(
+      [ 5, 8, 11, 14, 17 ],
+      errors: [ 100, 118, 106, 124, 112 ]
+      info: [ 90, 120, 108, 120, 100 ]
+      bad: [ 95, 100, 110, 100, 110 ]
+    )
+    d.sortedNames().should.eql [ "errors", "bad", "info" ]
+
