@@ -1,18 +1,13 @@
-axes = require "./axes"
-canvas = require "./canvas"
-
 DEFAULT_OPTIONS =
   width: 70
   height: 20
   scaleToZero: false
   fill: true
-  # for painting to canvas:
-  colors: [ "red", "blue", "orange", "green", "purple", "cyan" ]
-  backgroundColor: "335"
-  backgroundHighlightColor: "333"
-  gridColor: "555"
-  labelColor: "077"
 
+# FIXME stack graph?
+
+# Plot a DataTable into a grid of distinct x/y points, suitable for a character display.
+# Drawing to an ansi canvas is done in AnsiGraph.
 class GridGraph
   constructor: (@dataTable, options = {}) ->
     @options = {}
@@ -70,41 +65,4 @@ class GridGraph
     Object.keys(@scaled.datasets).sort()
 
 
-X_MARGIN = 7
-Y_MARGIN = 2
-
-paint = (dataTable, inOptions) ->
-  options = {}
-  for k, v of DEFAULT_OPTIONS then options[k] = v
-  for k, v of inOptions then options[k] = v
-
-  graph = new GridGraph(dataTable, options)
-  canvas = new canvas.Canvas(graph.width + X_MARGIN, graph.height + Y_MARGIN)
-  canvas.fillBackground(options.backgroundColor)
-
-  graph.draw()
-
-  # borders
-  canvas.backgroundColor(options.backgroundColor).color(options.gridColor)
-  for y in [0 ... graph.height] then canvas.at(X_MARGIN - 1, y).write("|")
-  for x in [0 ... graph.width] then canvas.at(x + X_MARGIN, graph.height).write("-")
-  canvas.at(X_MARGIN - 1, graph.height).write("+")
-
-  # x/y axis labels
-  canvas.color(options.labelColor)
-  axes.drawXLabels(canvas, graph.scaled, X_MARGIN, graph.height + 1, graph.width)
-  yLabelIndexes = axes.drawYLabels(canvas, 0, 0, graph.height, graph.yValues())
-  canvas.backgroundColor(options.backgroundHighlightColor)
-  for y in yLabelIndexes then for x in [0 ... graph.width] then canvas.at(x + X_MARGIN, y).write(" ")
-
-  # draw the graph now.
-  names = graph.sortedNames()
-  graph.map (x) -> if x? then options.colors[names.indexOf(x) % options.colors.length] else null
-  for y in [0 ... graph.height] then for x in [0 ... graph.width]
-    color = graph.get(x, y)
-    if color? then canvas.at(x + X_MARGIN, y).backgroundColor(color).write(" ")
-
-  canvas
-
 exports.GridGraph = GridGraph
-exports.paint = paint
