@@ -1,5 +1,5 @@
 util = require 'util'
-axes = require "./axes"
+util = require "./util"
 canvas = require "./canvas"
 
 MINUTES = 60
@@ -134,6 +134,9 @@ class DataTable
       names.push winner
       delete datasets[winner]
     names
+
+  toString: ->
+    "<DataTable of #{@timestamps.length} [#{@timestamps[0]}..#{@timestamps[@last]}] #{Object.keys(@datasets).join(', ')}>"
 
   # ----- internals:
 

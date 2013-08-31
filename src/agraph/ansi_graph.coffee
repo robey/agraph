@@ -1,6 +1,6 @@
 strftime = require 'strftime'
 
-axes = require "./axes"
+util = require "./util"
 Canvas = require("./canvas").Canvas
 GridGraph = require("./grid_graph").GridGraph
 
@@ -51,7 +51,7 @@ class AnsiGraph
   # lines in the background.
   drawYLabels: (canvas) ->
     canvas.color(@options.labelColor)
-    yLabels = @graph.yValues().map(axes.humanize)
+    yLabels = @graph.yValues().map(util.humanize)
     lastIndex = -1
     lastLabel = ""
     labelIndexes = []

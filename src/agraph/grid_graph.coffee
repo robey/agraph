@@ -54,10 +54,13 @@ class GridGraph
   yValues: ->
     [0 ... @height].map (i) => @bottom + i * @interval
 
-  toString: ->
+  dump: ->
     lines = for y in [0 ... @height]
       (for x in [0 ... @width] then (if @get(x, y)? then "*" else "_")).join("")
     lines.join("\n") + "\n"
+
+  toString: ->
+    "<GridGraph #{@width}x#{@height} of #{@dataTable}>"
 
 
 exports.GridGraph = GridGraph
