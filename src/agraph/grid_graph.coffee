@@ -4,7 +4,7 @@ canvas = require "./canvas"
 DEFAULT_OPTIONS =
   width: 70
   height: 20
-  scale_to_zero: false  # FIXME
+  scaleToZero: false
   fill: true
   # for painting to canvas:
   colors: [ "red", "blue", "orange", "green", "purple", "cyan" ]
@@ -28,7 +28,7 @@ class GridGraph
   prepare: ->
     return if @scaled?
     @scaled = @dataTable.toDataPoints(@width)
-    @bottom = if @options.scale_to_zero then 0 else @scaled.minimum()
+    @bottom = if @options.scaleToZero then 0 else @scaled.minimum()
     @top = @scaled.maximum()
     if @height > 8
       # leave a 1-unit gap at the top & bottom

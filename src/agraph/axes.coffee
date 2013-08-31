@@ -22,15 +22,13 @@ drawYLabels = (canvas, x, yOffset, height, yValues) ->
 
 drawXLabels = (canvas, dataTable, xOffset, y, width) ->
   x = 0
+  roundedTimes = dataTable.roundedTimes()
   while x < width - 4
-    label = roundedTime(dataTable.timestamps[x], dataTable.interval, dataTable.totalInterval)
-    if label?
-      leftEdge = x
-      while roundedTime(dataTable.timestamps[x + 1], dataTable.interval, dataTable.totalInterval) == label
-        x += 1
-      rightEdge = x
-      colonLocation = Math.round((rightEdge + leftEdge) / 2)
-      canvas.at(colonLocation + xOffset - 2, y).write(label)
+    delta = roundedTimes[x]
+    if delta?
+      date = new Date((dataTable.timestamps[x] + delta) * 1000)
+      label = strftime.strftime((if dataTable.totalInterval > 2 * DAYS then "%m/%d" else "%H:%M"), date)
+      canvas.at(x + xOffset - 2, y).write(label)
       x += 6
     else
       x += 1
@@ -55,38 +53,7 @@ lpad = (s, n) ->
   if s.length >= n then return s
   lpad("          "[0 ... n - s.length] + s, n)
 
-# for a given total interval, find a good granularity to round to.
-granularity = (totalInterval) ->
-  if totalInterval >= 24 * HOURS
-    4 * HOURS
-  else if totalInterval > 8 * HOURS
-    1 * HOURS
-  else if totalInterval > 2 * HOURS
-    15 * MINUTES
-  else if totalInterval > 30 * MINUTES
-    5 * MINUTES
-  else
-    1 * MINUTES
-
-# if the timestamp can be rounded to a nice rounded time, return it. otherwise, null.
-roundedTime = (timestamp, interval, totalInterval) ->
-  minTime = timestamp - (interval / 2)
-  maxTime = timestamp + (interval / 2)
-  g = granularity(totalInterval)
-  lowTime = Math.round(timestamp / g) * g
-  hiTime = lowTime + g
-  ts = if lowTime >= minTime
-    lowTime
-  else if hiTime <= maxTime
-    hiTime
-  else
-    null
-  if not ts? then return null
-  strftime.strftime((if totalInterval > 2 * DAYS then "%m/%d" else "%H:%M"), new Date(ts * 1000))
-
 
 exports.drawYLabels = drawYLabels
 exports.drawXLabels = drawXLabels
 exports.humanize = humanize
-exports.granularity = granularity
-exports.roundedTime = roundedTime

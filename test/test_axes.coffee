@@ -25,11 +25,3 @@ describe "axes", ->
     axes.humanize(0.00001).should.eql "   10u"
     axes.humanize(0.000001).should.eql "    1u"
     axes.humanize(0.0000001).should.eql "  100n"
-
-  it "roundedTime", ->
-    ts1 = new Date("Fri Aug 30 2013 01:00:00").getTime() / 1000
-    axes.granularity(20 * 60).should.eql 60
-    axes.roundedTime(ts1, 60, 20 * 60).should.eql "01:00"
-    axes.roundedTime(ts1 + 29, 60, 20 * 60).should.eql "01:00"
-    (axes.roundedTime(ts1 + 29, 30, 20 * 60)?).should.eql false
-    axes.roundedTime(ts1, 60, 50 * 60 * 60).should.eql "08/30"

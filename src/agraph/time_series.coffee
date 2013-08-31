@@ -2,8 +2,25 @@ util = require 'util'
 axes = require "./axes"
 canvas = require "./canvas"
 
+MINUTES = 60
+HOURS = 60 * MINUTES
+DAYS = 24 * HOURS
+
 sort_ints = (list) ->
   list.map((n) -> parseInt(n)).sort((a, b) -> a - b)
+
+# for a given total interval, find a good granularity to round timestamps to.
+timeGranularityFor = (interval) ->
+  if interval >= 24 * HOURS
+    4 * HOURS
+  else if interval > 8 * HOURS
+    1 * HOURS
+  else if interval > 2 * HOURS
+    15 * MINUTES
+  else if interval > 30 * MINUTES
+    5 * MINUTES
+  else
+    1 * MINUTES
 
 
 class DataCollection
@@ -46,7 +63,7 @@ class DataCollection
 class DataTable
   # timestamps is a sorted list of time values, at equal intervals.
   # datasets is { name -> [values...] }, where the values correspond 1-to-1 with the timestamps.
-  constructor: (@timestamps, @datasets) ->
+  constructor: (@timestamps, @datasets = {}) ->
     @last = @timestamps.length - 1
     @interval = @timestamps[1] - @timestamps[0]
     @totalInterval = @interval * @last
@@ -78,6 +95,17 @@ class DataTable
 
   maximum: ->
     Math.max.apply(Math, (for name, dataset of @datasets then Math.max.apply(Math, dataset)))
+
+  # for each time interval, if it contains a timestamp that can be rounded to a "nice" granularity, return the amount
+  # to add to the interval to make it nice. if it doesn't cover a good timestamp, return null.
+  roundedTimes: ->
+    @timestamps.map (ts) =>
+      minTime = ts - (@interval / 2)
+      maxTime = ts + (@interval / 2)
+      g = timeGranularityFor(@totalInterval)
+      lowTime = Math.floor(ts / g) * g
+      hiTime = lowTime + g
+      if lowTime >= minTime then lowTime - ts else (if hiTime <= maxTime then hiTime - ts else null)
 
   # ----- internals:
 

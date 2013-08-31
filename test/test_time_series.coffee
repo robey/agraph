@@ -79,3 +79,11 @@ describe "DataTable", ->
     )
     d.minimum().should.eql 1
     d.maximum().should.eql 20
+
+  it "calculates rounded times", ->
+    d = new time_series.DataTable([ 50, 80, 110, 140, 170 ])
+    d.roundedTimes().should.eql [ 10, null, 10, null, 10 ]
+    d.toDataPoints(11).roundedTimes().should.eql [ null, -2, null, null, null, null, -2, null, null, null, null ]
+    d = new time_series.DataTable([ 1900, 2000, 2100, 2200, 2300, 2400, 2500 ])
+    d.roundedTimes().should.eql [ -40, -20, 0, -40, -20, 0, -40 ]
+
