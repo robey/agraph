@@ -23,6 +23,14 @@ timeGranularityFor = (interval) ->
     1 * MINUTES
 
 
+# graphite: [ { target, datapoints: [ [ y, timestamp ], ... ] } ]
+loadFromGraphite = (data) ->
+  collection = new DataCollection()
+  for item in data
+    collection.addPoints(item.target, item.datapoints.map ([y, ts]) -> [ts, y])
+  collection.toTable()
+
+
 class DataCollection
   constructor: ->
     # name -> { timestamp: value }
@@ -173,5 +181,6 @@ class DataTable
     [ left, right ]
 
 
+exports.loadFromGraphite = loadFromGraphite
 exports.DataCollection = DataCollection
 exports.DataTable = DataTable

@@ -1,5 +1,7 @@
 strftime = require 'strftime'
 util = require 'util'
+
+svg = require "./svg"
 utils = require "./utils"
 
 PHI = (1 + Math.sqrt(5)) / 2
@@ -20,60 +22,12 @@ DEFAULT_OPTIONS =
   # padding between elements inside the svg
   innerPadding: 10
   # thickness of line to use for drawing the data  
-  lineWidth: 5
+  lineWidth: 3
   # font to use for labels, size (in virtual pixels), and baseline (vertical alignment)
   font: "Cousine"
   fontSize: 20
   fontBaseline: 4
 
-TEMPLATE = """
-<?xml version="1.0" standalone="no"?>
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg width="%VIEW_WIDTH%mm" height="%VIEW_HEIGHT%mm" viewBox="0 0 %PIXEL_WIDTH% %PIXEL_HEIGHT%" xmlns="http://www.w3.org/2000/svg" version="1.1">
-  <desc>%DESCRIPTION%</desc>
-
-  <!-- fill the background -->
-  <rect x="0" y="0" width="%PIXEL_WIDTH%" height="%PIXEL_HEIGHT%" fill="%BACKGROUND_COLOR%"/>
-
-  %CONTENT%
-</svg>
-"""
-
-class Rect
-  constructor: (@box, @options = {}) ->
-
-  toXml: ->
-    extra = ""
-    if @options.stroke? then extra += """stroke="#{@options.stroke}" """
-    if @options.strokeWidth? then extra += """stroke-width="#{@options.strokeWidth}" """
-    if @options.fill? then extra += """fill="#{@options.fill}" """
-    """<rect x="#{@box.x}" y="#{@box.y}" width="#{@box.width}" height="#{@box.height}" #{extra}/>"""
-
-class Line
-  constructor: (@points, @options = {}) ->
-
-  toXml: ->
-    path = "M #{@points[0].x} #{@points[0].y}"
-    for i in [1 ... @points.length]
-      path += " L #{@points[i].x} #{@points[i].y}"
-    extra = ""
-    if @options.stroke? then extra += """stroke="#{@options.stroke}" """
-    if @options.strokeWidth? then extra += """stroke-width="#{@options.strokeWidth}" """
-    if @options.strokeLineCap? then extra += """stroke-linecap="#{@options.strokeLineCap}" """
-    if @options.strokeLineJoin? then extra += """stroke-linejoin="#{@options.strokeLineJoin}" """
-    if @options.fill? then extra += """fill="#{@options.fill}" """
-    """<path d="#{path}" #{extra}/>"""
-
-class Text
-  constructor: (@x, @y, @text, @options = {}) ->
-
-  toXml: ->
-    extra = ""
-    if @options.fontFamily? then extra += """font-family="#{@options.fontFamily}" """
-    if @options.fontSize? then extra += """font-size="#{@options.fontSize}" """
-    if @options.fill? then extra += """fill="#{@options.fill}" """
-    if @options.textAnchor? then extra += """text-anchor="#{@options.textAnchor}" """
-    """<text x="#{@x}" y="#{@y}" #{extra}>#{@text}</text>"""
 
 class SvgGraph
   constructor: (@dataTable, options = {}) ->
@@ -122,82 +76,50 @@ class SvgGraph
     @yLines = @computeYLines()
     @xLines = @computeXLines()
 
-
-    #utils.roundToPrecision(number, digits, "ceil")
-
-
   draw: ->
-    content = """
-    <rect x="#{@yLabelBox.x}" y="#{@yLabelBox.y}" width="#{@yLabelBox.width}" height="#{@yLabelBox.height}" stroke="black" stroke-width="1" fill="none"/>
-    <rect x="#{@xLabelBox.x}" y="#{@xLabelBox.y}" width="#{@xLabelBox.width}" height="#{@xLabelBox.height}" stroke="black" stroke-width="1" fill="none"/>
-    <rect x="#{@legendBox.x}" y="#{@legendBox.y}" width="#{@legendBox.width}" height="#{@legendBox.height}" stroke="black" stroke-width="1" fill="none"/>
-    <rect x="#{@graphBox.x}" y="#{@graphBox.y}" width="#{@graphBox.width}" height="#{@graphBox.height}" stroke="black" stroke-width="1" fill="none"/>
-    """
-    content = @drawGraphBox() + "\n" +
-      @drawYLabels().map((x) -> x.toXml()).join("\n") + "\n" +
-      @drawXLabels().map((x) -> x.toXml()).join("\n") + "\n" +
-      @drawDataset(@dataTable.datasets["errors"], "blue").toXml()
-    TEMPLATE
-      .replace("%VIEW_WIDTH%", @options.viewWidth)
-      .replace("%VIEW_HEIGHT%", @options.viewHeight)
-      .replace(/%PIXEL_WIDTH%/g, @options.pixelWidth)
-      .replace(/%PIXEL_HEIGHT%/g, @options.pixelHeight)
-      .replace(/%DESCRIPTION%/g, "tbd")
-      .replace(/%BACKGROUND_COLOR%/g, @options.backgroundColor)
-      .replace("%CONTENT%", content)
+    content = [ @drawGraphBox(), new svg.Compound(@drawYLabels()), new svg.Compound(@drawXLabels()) ]
+    colorIndex = 0
+    for name in @dataTable.sortedNames()
+      content.push @drawDataset(@dataTable.datasets[name], @options.colors[colorIndex])
+      colorIndex = (colorIndex + 1) % @options.colors.length
+    svg.build(@options, content)
 
+  # ----- internals
 
   drawGraphBox: ->
-    outline = new Rect(@graphBox, stroke: @options.gridColor, strokeWidth: 1, fill: "none")
+    outline = new svg.Rect(@graphBox, stroke: @options.gridColor, strokeWidth: 1, fill: "none")
     yLines = for y in @yLines
       points = [
         { x: @graphBox.x, y: @yToPixel(y) }
         { x: @graphBox.x + @graphBox.width, y: @yToPixel(y) }
       ]
-      new Line(points, stroke: @options.gridColor, strokeWidth: 1, fill: "none")
+      new svg.Line(points, stroke: @options.gridColor, strokeWidth: 1, fill: "none")
     xLines = for x in @xLines
       points = [
         { x: @xToPixel(x), y: @graphBox.y }
         { x: @xToPixel(x), y: @graphBox.y + @graphBox.height }
       ]
-      new Line(points, stroke: @options.gridColor, strokeWidth: 1, fill: "none")
-    outline.toXml() + "\n" +
-      yLines.map((x) -> x.toXml()).join("\n") + "\n" +
-      xLines.map((x) -> x.toXml()).join("\n") + "\n"
+      new svg.Line(points, stroke: @options.gridColor, strokeWidth: 1, fill: "none")
+    new svg.Compound([ outline ].concat(yLines, xLines))
 
   drawYLabels: ->
     textOffset = Math.round(@options.fontSize / 2) - @options.fontBaseline
     for y in @yLines
       px = @yLabelBox.x + @yLabelBox.width
       py = @yToPixel(y) + textOffset
-      new Text(px, py, utils.humanize(y), fontFamily: @options.font, fontSize: @options.fontSize, fill: @options.labelColor, textAnchor: "end")
+      new svg.Text(px, py, utils.humanize(y), fontFamily: @options.font, fontSize: @options.fontSize, fill: @options.labelColor, textAnchor: "end")
 
   drawXLabels: ->
     format = if @dataTable.totalInterval > (2 * 24 * 60 * 60) then "%m/%d" else "%H:%M"
     py = @xLabelBox.y + @options.fontSize - @options.fontBaseline
     for ts in @xLines
       date = strftime.strftime(format, new Date(ts * 1000))
-      new Text(@xToPixel(ts), py, date, fontFamily: @options.font, fontSize: @options.fontSize, fill: @options.labelColor, textAnchor: "middle")
-
-    # roundedTimes = @dataTable.roundedTimes()
-    # format = if @dataTable.totalInterval > (2 * 24 * 60 * 60) then "%m/%d" else "%H:%M"
-    # lastX = @xLabelBox.x - (2 * @options.fontSize)
-    # py = @xLabelBox.y + @options.fontSize - @options.fontBaseline
-    # labels = []
-    # for i in [0 ... roundedTimes.length]
-    #   delta = roundedTimes[i]
-    #   continue if not delta?
-    #   ts = @dataTable.timestamps[i] + delta
-    #   px = @xToPixel(ts)
-    #   continue if px < lastX + (4 * @options.fontSize)
-    #   date = strftime.strftime(format, new Date(ts * 1000))
-    #   labels.push(new Text(px, py, date, fontFamily: @options.font, fontSize: @options.fontSize, fill: @options.labelColor, textAnchor: "middle"))
-    # labels
+      new svg.Text(@xToPixel(ts), py, date, fontFamily: @options.font, fontSize: @options.fontSize, fill: @options.labelColor, textAnchor: "middle")
 
   drawDataset: (dataset, color) ->
     points = for i in [0 ... dataset.length]
       { x: @xToPixel(@dataTable.timestamps[i]), y: @yToPixel(dataset[i]) }
-    new Line(points, stroke: color, strokeWidth: @options.lineWidth, strokeLineCap: "round", strokeLineJoin: "round", fill: "none")
+    new svg.Line(points, stroke: color, strokeWidth: @options.lineWidth, strokeLineCap: "round", strokeLineJoin: "round", fill: "none")
 
   computeYLines: ->
     yInterval = utils.roundToCurrency((@top - @bottom) / 5)
@@ -213,7 +135,7 @@ class SvgGraph
 
   computeXLines: ->
     roundedTimes = @dataTable.roundedTimes()
-    lastX = @xLabelBox.x - (2 * @options.fontSize)
+    lastX = @xLabelBox.x - (3 * @options.fontSize)
     xLines = []
     for i in [0 ... roundedTimes.length]
       delta = roundedTimes[i]
@@ -222,6 +144,7 @@ class SvgGraph
       px = @xToPixel(ts)
       continue if px < lastX + (4 * @options.fontSize)
       xLines.push ts
+      lastX = px
     xLines
 
   yToPixel: (y) -> 
