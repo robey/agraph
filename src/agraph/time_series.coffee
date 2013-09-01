@@ -1,5 +1,5 @@
 util = require 'util'
-util = require "./util"
+utils = require "./utils"
 canvas = require "./canvas"
 
 MINUTES = 60
@@ -21,18 +21,6 @@ timeGranularityFor = (interval) ->
     5 * MINUTES
   else
     1 * MINUTES
-
-# given a set of keys, and a function for mapping a key to a value, find the
-# key that maps to the maximum value.
-maxByKey = (keys, f) ->
-  max = null
-  winner = null
-  for key in keys
-    v = f(key)
-    if (not winner?) or (v > max)
-      winner = key
-      max = v
-  winner
 
 
 class DataCollection
@@ -129,8 +117,8 @@ class DataTable
       scores = {}
       for name of datasets then scores[name] = 0
       for i in [0 ... @timestamps.length]
-        scores[maxByKey(Object.keys(datasets), (name) -> datasets[name][i])] += 1
-      winner = maxByKey(Object.keys(scores), (name) -> scores[name])
+        scores[utils.maxByKey(Object.keys(datasets), (name) -> datasets[name][i])] += 1
+      winner = utils.maxByKey(Object.keys(scores), (name) -> scores[name])
       names.push winner
       delete datasets[winner]
     names
