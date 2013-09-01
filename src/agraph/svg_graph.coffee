@@ -35,6 +35,16 @@ TEMPLATE = """
 </svg>
 """
 
+class Rect
+  constructor: (@box, @options) ->
+
+  toXml: ->
+    extra = ""
+    if @options.stroke? then extra += """stroke="#{@options.stroke}" """
+    if @options.strokeWidth? then extra += """stroke-width="#{@options.strokeWidth}" """
+    if @options.fill? then extra += """fill="#{@options.fill}" """
+    """<rect x="#{@box.x}" y="#{@box.y}" width="#{@box.width}" height="#{@box.height}" #{extra}/>"""
+
 class SvgGraph
   constructor: (@dataTable, options = {}) ->
     @options = {}
@@ -72,6 +82,9 @@ class SvgGraph
     @graphBox.height = @xLabelBox.y - @options.innerPadding - @graphBox.y
     @yLabelBox.height = @graphBox.height
 
+    utils.roundToPrecision(number, digits, "ceil")
+
+
   draw: ->
     content = """
     <rect x="#{@yLabelBox.x}" y="#{@yLabelBox.y}" width="#{@yLabelBox.width}" height="#{@yLabelBox.height}" stroke="black" stroke-width="1" fill="none"/>
@@ -79,6 +92,7 @@ class SvgGraph
     <rect x="#{@legendBox.x}" y="#{@legendBox.y}" width="#{@legendBox.width}" height="#{@legendBox.height}" stroke="black" stroke-width="1" fill="none"/>
     <rect x="#{@graphBox.x}" y="#{@graphBox.y}" width="#{@graphBox.width}" height="#{@graphBox.height}" stroke="black" stroke-width="1" fill="none"/>
     """
+    content = @drawGraphBox()
     TEMPLATE
       .replace("%VIEW_WIDTH%", @options.viewWidth)
       .replace("%VIEW_HEIGHT%", @options.viewHeight)
@@ -88,6 +102,8 @@ class SvgGraph
       .replace(/%BACKGROUND_COLOR%/g, @options.backgroundColor)
       .replace("%CONTENT%", content)
 
+  drawGraphBox: ->
+    new Rect(@graphBox, stroke: @options.gridColor, strokeWidth: 1, fill: "none").toXml()
 
 
 exports.PHI = PHI

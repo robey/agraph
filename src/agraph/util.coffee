@@ -9,12 +9,13 @@ humanize = (number) ->
   while number < 1.0 and number != 0.0 and index > 0
     number *= 1000.0
     index -= 1
-  precision = if number == 0 then 0 else 3 - Math.floor(Math.log(number) / Math.log(10))
-  number = round_to_digits(number, precision)
+  number = roundToPrecision(number, 4)
   lpad(number.toString()[...5], 5) + HUMAN_LABELS[index]
 
-round_to_digits = (number, digits) ->
-  Math.pow(10, -digits) * Math.round(number * Math.pow(10, digits))
+roundToPrecision = (number, digits, function = "round") ->
+  if number == 0 then return 0
+  scale = digits - Math.floor(Math.log(number) / Math.log(10)) - 1
+  Math[function](number * Math.pow(10, scale)) * Math.pow(10, -scale)
 
 lpad = (s, n) ->
   if s.length >= n then return s
@@ -22,3 +23,4 @@ lpad = (s, n) ->
 
 
 exports.humanize = humanize
+exports.roundToPrecision = roundToPrecision
