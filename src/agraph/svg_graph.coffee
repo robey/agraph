@@ -7,7 +7,7 @@ utils = require "./utils"
 PHI = (1 + Math.sqrt(5)) / 2
 
 DEFAULT_OPTIONS =
-  colors: [ "red", "blue", "orange", "green", "purple", "cyan" ]
+  colors: [ "red", "blue", "orange", "#3c3", "#c6c", "yellow" ]
   backgroundColor: "#f8f8ff"
   graphBackgroundColor: "#eef"
   gridColor: "#555"
@@ -87,14 +87,14 @@ class SvgGraph
     @legendBox =
       x: @graphBox.x
       width: @graphBox.width
-      height: @legendLines * @options.fontSize
+      height: @legendLines * @options.fontSize + (@options.innerPadding * (@legendLines - 1))
     @legendBox.y = @options.pixelHeight - @options.padding - @legendBox.height
     # x-axis labels are above the legend box
     @xLabelBox =
       x: @graphBox.x
       width: @graphBox.width
       height: @options.fontSize
-    @xLabelBox.y = @legendBox.y - @options.innerPadding - @xLabelBox.height
+    @xLabelBox.y = @legendBox.y - @options.padding - @xLabelBox.height
     @graphBox.height = @xLabelBox.y - @options.innerPadding - @graphBox.y
     @yLabelBox.height = @graphBox.height
 
@@ -107,7 +107,7 @@ class SvgGraph
       dataset = @dataTable.datasets[name]
       color = @options.colors[colorIndex]
       content.push @drawDataset(dataset, color)
-#      content.push @drawLegend(index, name, color)
+      content.push @drawLegend(index, name, color)
       colorIndex = (colorIndex + 1) % @options.colors.length
       index += 1
     svg.build(@options, content)
@@ -156,7 +156,19 @@ class SvgGraph
       new svg.Text(@xToPixel(ts), py, date, fontFamily: @options.font, fontSize: @options.fontSize, fill: @options.labelColor, textAnchor: "middle")
 
   drawLegend: (index, name, color) ->
-#    y = @legendBox.y + Math.floor(index)
+    total = Object.keys(@dataTable.datasets).length
+    leftColumn = Math.round(total / 2)
+    y = @legendBox.y + (@options.fontSize + @options.innerPadding) * (index % leftColumn)
+    x = @legendBox.x + (@legendBox.width / 2) * Math.floor(index / leftColumn)
+    colorBox = { x: x, y: y, width: @options.fontSize, height: @options.fontSize }
+    box = new svg.Rect(colorBox, stroke: @options.gridColor, strokeWidth: 1, fill: color)
+    textX = x + colorBox.width + @options.innerPadding
+    textY = y + @options.fontSize - @options.fontBaseline
+    textWidth = (@legendBox.width / 2) - @options.innerPadding - @options.padding - colorBox.width
+    textHeight = @options.fontSize
+    text = new svg.Text(textX, textY, name, fontFamily: @options.font, fontSize: @options.fontSize, fill: @options.labelColor, clipPath: "cliptext#{index}")
+    clip = new svg.ClipPath("cliptext#{index}", new svg.Rect({ x: textX, y: y, width: textWidth, height: textHeight }))
+    new svg.Compound([ box, text, clip ])
 
   drawDataset: (dataset, color) ->
     points = for i in [0 ... dataset.length]

@@ -70,7 +70,7 @@ class ClipPath
   constructor: (@name, @rect) ->
 
   toXml: ->
-    """<clipPath id=#{@name}>#{@rect.toXml()}</clipPath>"""
+    """<clipPath id="#{@name}">#{@rect.toXml()}</clipPath>"""
 
 
 # collection of other xml items
@@ -95,5 +95,6 @@ build = (options, items) ->
 exports.Rect = Rect
 exports.Line = Line
 exports.Text = Text
+exports.ClipPath = ClipPath
 exports.Compound = Compound
 exports.build = build

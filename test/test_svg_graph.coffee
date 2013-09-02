@@ -12,9 +12,9 @@ describe "SvgGraph", ->
   it "computes bounding boxes", ->
     g = new svg_graph.SvgGraph(Data1, pixelWidth: 1000, aspectRatio: 2, padding: 20, innerPadding: 25, fontSize: 30)
     g.options.pixelHeight.should.eql 500
-    g.yLabelBox.should.eql { x: 20, y: 65, height: 305, width: 120 }
-    g.graphBox.should.eql { x: 165, y: 65, height: 305, width: 815 }
-    g.xLabelBox.should.eql { x: 165, y: 395, height: 30, width: 815 }
+    g.yLabelBox.should.eql { x: 20, y: 65, height: 310, width: 120 }
+    g.graphBox.should.eql { x: 165, y: 65, height: 310, width: 815 }
+    g.xLabelBox.should.eql { x: 165, y: 400, height: 30, width: 815 }
     g.legendBox.should.eql { x: 165, y: 450, height: 30, width: 815 }
     g.top.should.eql 160
     g.bottom.should.eql 0
