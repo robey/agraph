@@ -25,6 +25,18 @@ describe "DataCollection", ->
       hits: [ undefined, 11, undefined, 12 ]
     }
 
+  it "refuses to boil the oceans", ->
+    d = new time_series.DataCollection()
+    d.addPoints("errors", [ [ 0, 1 ], [ 5, 2 ], [ 15000, 6 ] ])
+    (-> d.toTable()).should.throw /too distant/
+
+  it "uses numbers", ->
+    d = new time_series.DataCollection()
+    d.addPoints("errors", [ [ "0", 1 ], [ "5", 2 ], ])
+    d.addPoints("hits", [ [ 0, 2 ], [ 5, 3 ], ])
+    d.toTable().timestamps.should.eql [ 0, 5 ]
+
+
 describe "DataTable", ->
   describe "can interpolate a dataset", ->
     Data1 = new time_series.DataTable([ 0, 3, 6 ], errors: [ 2, 5, 8 ])
@@ -78,6 +90,15 @@ describe "DataTable", ->
       hits: [ 5, 4, 9, 1, 4 ]
     )
     d.minimum().should.eql 1
+    d.maximum().should.eql 20
+
+  it "is okay with missing elements", ->
+    d = new time_series.DataTable(
+      [ 1, 2, 3, 4, 5 ],
+      errors: [ 10, 13, 15, 20, 18 ],
+      hits: [ 5, 4, null, null, 4 ]
+    )
+    d.minimum().should.eql 4
     d.maximum().should.eql 20
 
   it "calculates rounded times", ->

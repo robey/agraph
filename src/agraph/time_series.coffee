@@ -28,7 +28,7 @@ loadFromGraphite = (data) ->
   collection = new DataCollection()
   for item in data
     collection.addPoints(item.target, item.datapoints.map ([y, ts]) -> [ts, y])
-  collection.toTable()
+  collection
 
 
 class DataCollection
@@ -42,7 +42,7 @@ class DataCollection
     if Object.prototype.toString.call(points[0]).match(/Array/)?
       for [ ts, y ] in points then @data[name][ts] = y
     else
-      for p in points then @data[name][p.x] = p.y
+      for p in points then @data[name][parseInt(p.x)] = parseInt(p.y)
 
   # normalize all the intervals and fill in blanks ("undefined") for missing data.
   # end result should be a perfect rectangle of data.
@@ -57,6 +57,7 @@ class DataCollection
       i = 1
       while i < timestamps.length
         if timestamps[i] - timestamps[i - 1] > interval
+          if timestamps[i] - timestamps[i - 1] > interval * 100 then throw new Error("Data points are too distant on the time scale")
           timestamps.push timestamps[i - 1] + interval
           timestamps = sort_ints(timestamps)
         else
@@ -99,10 +100,10 @@ class DataTable
     rv.join("\n") + "\n"
 
   minimum: ->
-    Math.min.apply(Math, (for name, dataset of @datasets then Math.min.apply(Math, dataset)))
+    Math.min.apply(Math, (for name, dataset of @datasets then Math.min.apply(Math, dataset.filter((n) -> n?))))
 
   maximum: ->
-    Math.max.apply(Math, (for name, dataset of @datasets then Math.max.apply(Math, dataset)))
+    Math.max.apply(Math, (for name, dataset of @datasets then Math.max.apply(Math, dataset.filter((n) -> n?))))
 
   # for each time interval, if it contains a timestamp that can be rounded to a "nice" granularity, return the amount
   # to add to the interval to make it nice. if it doesn't cover a good timestamp, return null.
