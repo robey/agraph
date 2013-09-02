@@ -7,12 +7,14 @@ utils = require "./utils"
 PHI = (1 + Math.sqrt(5)) / 2
 
 DEFAULT_OPTIONS =
+  title: "no title!"
   colors: [ "red", "blue", "orange", "green", "purple", "cyan" ]
-  backgroundColor: "#fff"
+  backgroundColor: "#f8f8ff"
   graphBackgroundColor: "#eef"
   gridColor: "#555"
-  gridColor2: "#ccc"
+  gridColor2: "#bbb"
   labelColor: "#555"
+  titleColor: "#c33"
   # width of image, in millimeters:
   viewWidth: 120
   # width of image, in virtual pixels:
@@ -45,16 +47,25 @@ class SvgGraph
     @options.pixelHeight = Math.round(@options.pixelWidth / @options.aspectRatio)
     @options.viewHeight = Math.round(@options.viewWidth / @options.aspectRatio)
     @legendLines = Math.ceil(Object.keys(@dataTable.datasets).length / 2)
+    @layout()
+
+  layout: ->
+    # title at the top
+    @titleBox =
+      y: @options.padding
+      height: @options.fontSize
     # y-axis labels need width for 6 characters.
     @yLabelBox =
       x: @options.padding
-      y: @options.padding
+      y: @titleBox.y + @titleBox.height + @options.padding
       width: 4 * @options.fontSize
     # graph is right of y-axis labels, with padding on the right.
     @graphBox =
       x: @yLabelBox.x + @yLabelBox.width + @options.innerPadding
-      y: @options.padding
+      y: @yLabelBox.y
     @graphBox.width = @options.pixelWidth - @options.padding - @graphBox.x
+    @titleBox.x = @graphBox.x
+    @titleBox.width = @graphBox.width
     # legend is below the graph
     @legendBox =
       x: @graphBox.x
@@ -81,7 +92,7 @@ class SvgGraph
     [ @xLines, @xHelperLines ] = @computeXLines()
 
   draw: ->
-    content = [ @drawGraphBox(), new svg.Compound(@drawYLabels()), new svg.Compound(@drawXLabels()) ]
+    content = [ @drawTitleBox(), @drawGraphBox(), new svg.Compound(@drawYLabels()), new svg.Compound(@drawXLabels()) ]
     colorIndex = 0
     for name in @dataTable.sortedNames()
       content.push @drawDataset(@dataTable.datasets[name], @options.colors[colorIndex])
@@ -89,6 +100,11 @@ class SvgGraph
     svg.build(@options, content)
 
   # ----- internals
+
+  drawTitleBox: ->
+    x = @titleBox.x + (@titleBox.width / 2)
+    y = @titleBox.y + @options.fontSize - @options.fontBaseline
+    new svg.Text(x, y, @options.title, fontFamily: @options.font, fontSize: @options.fontSize, fill: @options.titleColor, textAnchor: "middle")
 
   drawGraphBox: ->
     outline = new svg.Rect(@graphBox, stroke: @options.gridColor, strokeWidth: 1, fill: @options.graphBackgroundColor)
@@ -174,7 +190,6 @@ class SvgGraph
 
   xToPixel: (x) ->
     @graphBox.x + ((x - @left) / (@right - @left)) * @graphBox.width
-
 
 
 exports.PHI = PHI

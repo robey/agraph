@@ -53,7 +53,15 @@ class Text
     if @options.fontSize? then extra += """font-size="#{@options.fontSize}" """
     if @options.fill? then extra += """fill="#{@options.fill}" """
     if @options.textAnchor? then extra += """text-anchor="#{@options.textAnchor}" """
+    if @options.clipPath? then extra += """clip-path="url(##{@options.clipPath})" """
     """<text x="#{@x}" y="#{@y}" #{extra}>#{@text}</text>"""
+
+
+class ClipPath
+  constructor: (@name, @rect) ->
+
+  toXml: ->
+    """<clipPath id=#{@name}>#{@rect.toXml()}</clipPath>"""
 
 
 # collection of other xml items
