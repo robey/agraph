@@ -7,14 +7,13 @@ utils = require "./utils"
 PHI = (1 + Math.sqrt(5)) / 2
 
 DEFAULT_OPTIONS =
-  title: "no title!"
   colors: [ "red", "blue", "orange", "green", "purple", "cyan" ]
   backgroundColor: "#f8f8ff"
   graphBackgroundColor: "#eef"
   gridColor: "#555"
   gridColor2: "#bbb"
   labelColor: "#555"
-  titleColor: "#c33"
+  titleColor: "#609"
   # width of image, in millimeters:
   viewWidth: 120
   # width of image, in virtual pixels:
@@ -29,10 +28,17 @@ DEFAULT_OPTIONS =
   lineWidth: 3
   # should the graph be a solid shape filled down?
   fill: false
+  # should the Y axis be zero-based?
+  scaleToZero: true
   # font to use for labels, size (in virtual pixels), and baseline (vertical alignment)
   font: "Cousine"
   fontSize: 20
   fontBaseline: 4
+  # font to use for the title
+  titleFont: "Avenir Next"
+  titleFontSize: 25
+  titleFontBaseline: 5
+  title: null
 
 
 class SvgGraph
@@ -42,6 +48,7 @@ class SvgGraph
     for k, v of options then @options[k] = v
     @width = options.width
     @height = options.height
+    if not @options.title? then @options.title = dataTable.sortedNames()[0]
 
     # calculate sizes of things:
     @options.pixelHeight = Math.round(@options.pixelWidth / @options.aspectRatio)
@@ -49,11 +56,21 @@ class SvgGraph
     @legendLines = Math.ceil(Object.keys(@dataTable.datasets).length / 2)
     @layout()
 
+    # find a good bounding box for the graph itself
+    @top = utils.roundToPrecision(@dataTable.maximum(), 2, "ceil")
+    @bottom = if @options.scaleToZero then 0 else utils.roundToPrecision(@dataTable.minimum(), 2, "floor")
+    @left = @dataTable.timestamps[0]
+    @right = @dataTable.timestamps[@dataTable.last]
+
+    # compute x/y guidelines
+    @yLines = @computeYLines()
+    [ @xLines, @xHelperLines ] = @computeXLines()
+
   layout: ->
     # title at the top
     @titleBox =
       y: @options.padding
-      height: @options.fontSize
+      height: @options.titleFontSize
     # y-axis labels need width for 6 characters.
     @yLabelBox =
       x: @options.padding
@@ -81,30 +98,26 @@ class SvgGraph
     @graphBox.height = @xLabelBox.y - @options.innerPadding - @graphBox.y
     @yLabelBox.height = @graphBox.height
 
-    # find a good bounding box for the graph itself
-    @top = utils.roundToPrecision(@dataTable.maximum(), 2, "ceil")
-    @bottom = utils.roundToPrecision(@dataTable.minimum(), 2, "floor")
-    @left = @dataTable.timestamps[0]
-    @right = @dataTable.timestamps[@dataTable.last]
-
-    # compute x/y guidelines
-    @yLines = @computeYLines()
-    [ @xLines, @xHelperLines ] = @computeXLines()
 
   draw: ->
     content = [ @drawTitleBox(), @drawGraphBox(), new svg.Compound(@drawYLabels()), new svg.Compound(@drawXLabels()) ]
     colorIndex = 0
+    index = 0
     for name in @dataTable.sortedNames()
-      content.push @drawDataset(@dataTable.datasets[name], @options.colors[colorIndex])
+      dataset = @dataTable.datasets[name]
+      color = @options.colors[colorIndex]
+      content.push @drawDataset(dataset, color)
+#      content.push @drawLegend(index, name, color)
       colorIndex = (colorIndex + 1) % @options.colors.length
+      index += 1
     svg.build(@options, content)
 
   # ----- internals
 
   drawTitleBox: ->
     x = @titleBox.x + (@titleBox.width / 2)
-    y = @titleBox.y + @options.fontSize - @options.fontBaseline
-    new svg.Text(x, y, @options.title, fontFamily: @options.font, fontSize: @options.fontSize, fill: @options.titleColor, textAnchor: "middle")
+    y = @titleBox.y + @options.titleFontSize - @options.titleFontBaseline
+    new svg.Text(x, y, @options.title, fontFamily: @options.titleFont, fontSize: @options.titleFontSize, fill: @options.titleColor, textAnchor: "middle")
 
   drawGraphBox: ->
     outline = new svg.Rect(@graphBox, stroke: @options.gridColor, strokeWidth: 1, fill: @options.graphBackgroundColor)
@@ -142,9 +155,12 @@ class SvgGraph
       date = strftime.strftime(format, new Date(ts * 1000))
       new svg.Text(@xToPixel(ts), py, date, fontFamily: @options.font, fontSize: @options.fontSize, fill: @options.labelColor, textAnchor: "middle")
 
+  drawLegend: (index, name, color) ->
+#    y = @legendBox.y + Math.floor(index)
+
   drawDataset: (dataset, color) ->
     points = for i in [0 ... dataset.length]
-      { x: @xToPixel(@dataTable.timestamps[i]), y: @yToPixel(dataset[i]) }
+      { x: @xToPixel(@dataTable.timestamps[i]), y: (if dataset[i]? then @yToPixel(dataset[i]) else null) }
     if @options.fill
       points = [ { x: @graphBox.x, y: @graphBox.y + @graphBox.height } ].concat(points)
       points.push { x: @graphBox.x + @graphBox.width, y: @graphBox.y + @graphBox.height }
