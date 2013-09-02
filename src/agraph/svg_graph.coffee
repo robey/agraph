@@ -8,8 +8,10 @@ PHI = (1 + Math.sqrt(5)) / 2
 
 DEFAULT_OPTIONS =
   colors: [ "red", "blue", "orange", "green", "purple", "cyan" ]
-  backgroundColor: "#ffe"
+  backgroundColor: "#fff"
+  graphBackgroundColor: "#eef"
   gridColor: "#555"
+  gridColor2: "#ccc"
   labelColor: "#555"
   # width of image, in millimeters:
   viewWidth: 120
@@ -74,7 +76,7 @@ class SvgGraph
 
     # compute x/y guidelines
     @yLines = @computeYLines()
-    @xLines = @computeXLines()
+    [ @xLines, @xHelperLines ] = @computeXLines()
 
   draw: ->
     content = [ @drawGraphBox(), new svg.Compound(@drawYLabels()), new svg.Compound(@drawXLabels()) ]
@@ -87,7 +89,7 @@ class SvgGraph
   # ----- internals
 
   drawGraphBox: ->
-    outline = new svg.Rect(@graphBox, stroke: @options.gridColor, strokeWidth: 1, fill: "none")
+    outline = new svg.Rect(@graphBox, stroke: @options.gridColor, strokeWidth: 1, fill: @options.graphBackgroundColor)
     yLines = for y in @yLines
       points = [
         { x: @graphBox.x, y: @yToPixel(y) }
@@ -100,7 +102,13 @@ class SvgGraph
         { x: @xToPixel(x), y: @graphBox.y + @graphBox.height }
       ]
       new svg.Line(points, stroke: @options.gridColor, strokeWidth: 1, fill: "none")
-    new svg.Compound([ outline ].concat(yLines, xLines))
+    xHelperLines = for x in @xHelperLines
+      points = [
+        { x: @xToPixel(x), y: @graphBox.y }
+        { x: @xToPixel(x), y: @graphBox.y + @graphBox.height }
+      ]
+      new svg.Line(points, stroke: @options.gridColor2, strokeWidth: 1, fill: "none")
+    new svg.Compound([ outline ].concat(yLines, xLines, xHelperLines))
 
   drawYLabels: ->
     textOffset = Math.round(@options.fontSize / 2) - @options.fontBaseline
@@ -137,15 +145,18 @@ class SvgGraph
     roundedTimes = @dataTable.roundedTimes()
     lastX = @xLabelBox.x - (3 * @options.fontSize)
     xLines = []
+    helperLines = []
     for i in [0 ... roundedTimes.length]
       delta = roundedTimes[i]
       continue if not delta?
       ts = @dataTable.timestamps[i] + delta
       px = @xToPixel(ts)
-      continue if px < lastX + (4 * @options.fontSize)
-      xLines.push ts
-      lastX = px
-    xLines
+      if px < lastX + (4 * @options.fontSize)
+        helperLines.push ts
+      else
+        xLines.push ts
+        lastX = px
+    [ xLines, helperLines ]
 
   yToPixel: (y) -> 
     scale = 1 - ((y - @bottom) / (@top - @bottom))
