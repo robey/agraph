@@ -25,6 +25,8 @@ DEFAULT_OPTIONS =
   innerPadding: 10
   # thickness of line to use for drawing the data  
   lineWidth: 3
+  # should the graph be a solid shape filled down?
+  fill: false
   # font to use for labels, size (in virtual pixels), and baseline (vertical alignment)
   font: "Cousine"
   fontSize: 20
@@ -127,7 +129,15 @@ class SvgGraph
   drawDataset: (dataset, color) ->
     points = for i in [0 ... dataset.length]
       { x: @xToPixel(@dataTable.timestamps[i]), y: @yToPixel(dataset[i]) }
-    new svg.Line(points, stroke: color, strokeWidth: @options.lineWidth, strokeLineCap: "round", strokeLineJoin: "round", fill: "none")
+    if @options.fill
+      points = [ { x: @graphBox.x, y: @graphBox.y + @graphBox.height } ].concat(points)
+      points.push { x: @graphBox.x + @graphBox.width, y: @graphBox.y + @graphBox.height }
+      fillColor = color
+      closeLoop = true
+    else
+      fillColor = "none"
+      closeLoop = false
+    new svg.Line(points, stroke: color, strokeWidth: @options.lineWidth, strokeLineCap: "round", strokeLineJoin: "round", fill: fillColor, closeLoop: closeLoop)
 
   computeYLines: ->
     yInterval = utils.roundToCurrency((@top - @bottom) / 5)

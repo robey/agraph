@@ -26,6 +26,7 @@ class Rect
     if @options.fill? then extra += """fill="#{@options.fill}" """
     """<rect x="#{Math.round(@box.x)}" y="#{Math.round(@box.y)}" width="#{Math.round(@box.width)}" height="#{Math.round(@box.height)}" #{extra}/>"""
 
+
 class Line
   constructor: (@points, @options = {}) ->
 
@@ -33,6 +34,7 @@ class Line
     path = "M #{Math.round(@points[0].x)} #{Math.round(@points[0].y)}"
     for i in [1 ... @points.length]
       path += " L #{Math.round(@points[i].x)} #{Math.round(@points[i].y)}"
+    if @options.closeLoop then path += " Z"
     extra = ""
     if @options.stroke? then extra += """stroke="#{@options.stroke}" """
     if @options.strokeWidth? then extra += """stroke-width="#{@options.strokeWidth}" """
@@ -40,6 +42,7 @@ class Line
     if @options.strokeLineJoin? then extra += """stroke-linejoin="#{@options.strokeLineJoin}" """
     if @options.fill? then extra += """fill="#{@options.fill}" """
     """<path d="#{path}" #{extra}/>"""
+
 
 class Text
   constructor: (@x, @y, @text, @options = {}) ->
@@ -51,6 +54,7 @@ class Text
     if @options.fill? then extra += """fill="#{@options.fill}" """
     if @options.textAnchor? then extra += """text-anchor="#{@options.textAnchor}" """
     """<text x="#{@x}" y="#{@y}" #{extra}>#{@text}</text>"""
+
 
 # collection of other xml items
 class Compound
