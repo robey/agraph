@@ -30,18 +30,27 @@ class Rect
 class Line
   constructor: (@points, @options = {}) ->
 
-  toXml: ->
-    path = "M #{Math.round(@points[0].x)} #{Math.round(@points[0].y)}"
-    for i in [1 ... @points.length]
-      path += " L #{Math.round(@points[i].x)} #{Math.round(@points[i].y)}"
+  toPath: ->
+    discontinuity = true
+    path = ""
+    for point in @points
+      if not point.y?
+        discontinuity = true
+      else
+        command = if discontinuity then "M" else "L"
+        path += "#{command} #{Math.round(point.x)} #{Math.round(point.y)} "
+        discontinuity = false
     if @options.closeLoop then path += " Z"
+    path
+
+  toXml: ->
     extra = ""
     if @options.stroke? then extra += """stroke="#{@options.stroke}" """
     if @options.strokeWidth? then extra += """stroke-width="#{@options.strokeWidth}" """
     if @options.strokeLineCap? then extra += """stroke-linecap="#{@options.strokeLineCap}" """
     if @options.strokeLineJoin? then extra += """stroke-linejoin="#{@options.strokeLineJoin}" """
     if @options.fill? then extra += """fill="#{@options.fill}" """
-    """<path d="#{path}" #{extra}/>"""
+    """<path d="#{@toPath()}" #{extra}/>"""
 
 
 class Text
@@ -54,7 +63,7 @@ class Text
     if @options.fill? then extra += """fill="#{@options.fill}" """
     if @options.textAnchor? then extra += """text-anchor="#{@options.textAnchor}" """
     if @options.clipPath? then extra += """clip-path="url(##{@options.clipPath})" """
-    """<text x="#{@x}" y="#{@y}" #{extra}>#{@text}</text>"""
+    """<text x="#{Math.round(@x)}" y="#{Math.round(@y)}" #{extra}>#{@text}</text>"""
 
 
 class ClipPath
