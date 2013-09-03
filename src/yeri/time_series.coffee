@@ -23,14 +23,6 @@ timeGranularityFor = (interval) ->
     1 * MINUTES
 
 
-# graphite: [ { target, datapoints: [ [ y, timestamp ], ... ] } ]
-loadFromGraphite = (data) ->
-  collection = new DataCollection()
-  for item in data
-    collection.addPoints(item.target, item.datapoints.map ([y, ts]) -> [ts, y])
-  collection
-
-
 class DataCollection
   constructor: ->
     # name -> { timestamp: value }
@@ -43,6 +35,10 @@ class DataCollection
       for [ ts, y ] in points then @data[name][ts] = y
     else
       for p in points then @data[name][parseInt(p.x)] = parseInt(p.y)
+
+  # graphite: [ { target, datapoints: [ [ y, timestamp ], ... ] } ]
+  loadFromGraphite: (data) ->
+    for item in data then @addPoints(item.target, item.datapoints.map ([y, ts]) -> [ts, y])
 
   # normalize all the intervals and fill in blanks ("undefined") for missing data.
   # end result should be a perfect rectangle of data.
@@ -182,6 +178,5 @@ class DataTable
     [ left, right ]
 
 
-exports.loadFromGraphite = loadFromGraphite
 exports.DataCollection = DataCollection
 exports.DataTable = DataTable
