@@ -1,13 +1,13 @@
 {
-  "name": "agraph",
+  "name": "yeri",
   "version": "0.1.0",
-  "description": "draw full-color (text-based) ANSI graphs",
-  "keywords": [ "ansi", "graph", "raccoon" ],
+  "description": "draw full-color (text or SVG) time-series graphs",
+  "keywords": [ "graphite", "graph", "iyeriwok" ],
   "author": "Robey Pointer <robeypointer@gmail.com>",
-  "homepage": "https://github.com/robey/agraph",
+  "homepage": "https://github.com/robey/yeri",
   "repository": {
     "type": "git",
-    "url": "git://github.com/robey/agraph.git"
+    "url": "git://github.com/robey/yeri.git"
   },
   "licenses": [
     {
@@ -20,6 +20,8 @@
     "test": "plz --color -v test"
   },
   "dependencies": {
+    "optimist": "*",
+    "request": "*",
     "strftime": "*"
   },
   "devDependencies": {
@@ -27,9 +29,15 @@
     "mocha": "*",
     "should": "*"
   },
-  "main": "./lib/packrattle",
+  "main": "./lib/yeri",
   "files": [
+    "build.plz",
     "lib",
+    "bin/yeri",
     "test"
-  ]
+  ],
+  "bin": {
+    "yeri": "bin/yeri"
+  },
+  "preferGlobal": "true"
 }
