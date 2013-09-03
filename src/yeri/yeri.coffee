@@ -19,10 +19,11 @@ optimist = optimist
   .options("width", alias: "w", describe: "width of ANSI graph", default: defaults.DEFAULT_ANSI_OPTIONS.width)
   .options("height", alias: "h", describe: "height of ANSI graph", default: defaults.DEFAULT_ANSI_OPTIONS.height)
   .options("title", alias: "t", describe: "title of the graph")
-  .options("colors", alias: "c", describe: "set list of colors to cycle through", default: defaults.DEFAULT_OPTIONS.colors.join(","))
+  .options("colors", alias: "c", describe: "set list of colors to cycle through")
   .options("fill", alias: "f", describe: "fill graph below line", default: defaults.DEFAULT_OPTIONS.fill)
   .options("zero", alias: "z", describe: "zero-base the Y axis", default: defaults.DEFAULT_OPTIONS.scaleToZero)
   .options("legend", describe: "show legend underneath graph", default: defaults.DEFAULT_OPTIONS.showLegend)
+  .options("theme", describe: "select color theme")
 
 
 exports.main = ->
@@ -37,10 +38,20 @@ exports.main = ->
   options.width = argv.width
   options.height = argv.height
   options.title = argv.title
-  options.colors = argv.colors.split(",")
   options.fill = argv.fill
   options.scaleToZero = argv.zero
   options.showLegend = argv.legend
+
+  if argv.theme?
+    if not defaults.THEMES[argv.theme]?
+      console.log "ERROR: No such theme: #{argv.theme}"
+      console.log "Available themes: #{Object.keys(defaults.THEMES).sort().join(', ')}"
+      process.exit 1
+  else
+    argv.theme = if argv.svg then "light" else "dark"
+
+  options.extend(defaults.THEMES[argv.theme])
+  if argv.colors? then options.colors = argv.colors.split(",")
 
   collection = new time_series.DataCollection()
   work = for url in urls

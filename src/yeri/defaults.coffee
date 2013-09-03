@@ -25,8 +25,8 @@ THEME_DARK =
 THEME_LIGHT =
   colors: [ "red", "blue", "orange", "#3c3", "#c6c", "yellow" ]
   backgroundColor: "#f8f8ff"
-  graphBackgroundColor: "#eef"
-  backgroundHightlightColor: "#f8f8ff"
+  graphBackgroundColor: "#e8e8ff"
+  backgroundHighlightColor: "#f8f8ff"
   gridColor: "#555"
   gridColor2: "#bbb"
   labelColor: "#555"
@@ -34,7 +34,7 @@ THEME_LIGHT =
 
 # default options for AnsiGraph and SvgGraph.
 # (some options -- like fonts -- only make sense for SVG, obviously.)
-DEFAULT_OPTIONS = extend THEME_DARK,
+DEFAULT_OPTIONS =
   # should the graph be a solid shape filled down?
   fill: true
   # should the Y axis be zero-based?
@@ -43,6 +43,8 @@ DEFAULT_OPTIONS = extend THEME_DARK,
   title: null
   # draw a legend?
   showLegend: true
+  themeName: "light"
+  extend: (options) -> for k, v of options then @[k] = v
 
 DEFAULT_SVG_OPTIONS = extend DEFAULT_OPTIONS,
   # width of image, in millimeters:
@@ -70,9 +72,11 @@ DEFAULT_ANSI_OPTIONS = extend DEFAULT_OPTIONS,
   width: 80
   height: 24
 
+THEMES =
+  light: THEME_LIGHT
+  dark: THEME_DARK
 
-exports.THEME_DARK = THEME_DARK
-exports.THEME_LIGHT = THEME_LIGHT
+exports.THEMES = THEMES
 exports.DEFAULT_OPTIONS = DEFAULT_OPTIONS
 exports.DEFAULT_ANSI_OPTIONS = DEFAULT_ANSI_OPTIONS
 exports.DEFAULT_SVG_OPTIONS = DEFAULT_SVG_OPTIONS
