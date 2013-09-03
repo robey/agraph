@@ -14,13 +14,13 @@ THEME_DARK =
   # used to emphasize horizontal lines (only in ANSI)
   backgroundHighlightColor: "#333"
   # color of the grid lines
-  gridColor: "#555"
+  gridColor: "#999"
   # color of the secondary grid lines (only in SVG)
-  gridColor2: "#444"
+  gridColor2: "#777"
   # color of label text
-  labelColor: "#077"
+  labelColor: "#7cc"
   # color of title at the top
-  titleColor: "#c8f"
+  titleColor: "#ccf"
 
 THEME_LIGHT =
   colors: [ "red", "blue", "orange", "#3c3", "#c6c", "yellow" ]
@@ -36,11 +36,13 @@ THEME_LIGHT =
 # (some options -- like fonts -- only make sense for SVG, obviously.)
 DEFAULT_OPTIONS = extend THEME_DARK,
   # should the graph be a solid shape filled down?
-  fill: false
+  fill: true
   # should the Y axis be zero-based?
   scaleToZero: true
   # draw a title?
   title: null
+  # draw a legend?
+  showLegend: true
 
 DEFAULT_SVG_OPTIONS = extend DEFAULT_OPTIONS,
   # width of image, in millimeters:
@@ -67,8 +69,6 @@ DEFAULT_SVG_OPTIONS = extend DEFAULT_OPTIONS,
 DEFAULT_ANSI_OPTIONS = extend DEFAULT_OPTIONS,
   width: 80
   height: 24
-  # ansi really needs fill mode.
-  fill: true
 
 
 exports.THEME_DARK = THEME_DARK

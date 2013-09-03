@@ -7,6 +7,7 @@ util = require 'util'
 defaults = require "./defaults"
 time_series = require "./time_series"
 AnsiGraph = require("./ansi_graph").AnsiGraph
+SvgGraph = require("./svg_graph").SvgGraph
 
 USAGE = """
 Usage: yeri [options] <url(s)/filename(s)...>
@@ -21,6 +22,7 @@ optimist = optimist
   .options("colors", alias: "c", describe: "set list of colors to cycle through", default: defaults.DEFAULT_OPTIONS.colors.join(","))
   .options("fill", alias: "f", describe: "fill graph below line", default: defaults.DEFAULT_OPTIONS.fill)
   .options("zero", alias: "z", describe: "zero-base the Y axis", default: defaults.DEFAULT_OPTIONS.scaleToZero)
+  .options("legend", describe: "show legend underneath graph", default: defaults.DEFAULT_OPTIONS.showLegend)
 
 
 exports.main = ->
@@ -31,13 +33,14 @@ exports.main = ->
     process.exit 0
 
   options = {}
-  for k, v of defaults.DEFAULT_ANSI_OPTIONS then options[k] = v
+  for k, v of (if argv.svg then defaults.DEFAULT_SVG_OPTIONS else defaults.DEFAULT_ANSI_OPTIONS) then options[k] = v
   options.width = argv.width
   options.height = argv.height
   options.title = argv.title
   options.colors = argv.colors.split(",")
   options.fill = argv.fill
   options.scaleToZero = argv.zero
+  options.showLegend = argv.legend
 
   collection = new time_series.DataCollection()
   work = for url in urls
@@ -48,9 +51,14 @@ exports.main = ->
       console.log "ERROR: #{error}"
       process.exit 1
   Q.all(work).then ->
-    canvas = new AnsiGraph(collection.toTable(), options).draw()
-    for line in canvas.toStrings() then console.log(line)
+    if argv.svg
+      svg = new SvgGraph(collection.toTable(), options).draw()
+      console.log svg
+    else
+      canvas = new AnsiGraph(collection.toTable(), options).draw()
+      for line in canvas.toStrings() then console.log(line)
     process.exit(0)
+  .done()
 
 # ----- internals
 
