@@ -105,12 +105,12 @@ class AnsiGraph
 
   drawYLabels: (canvas, yOffset) ->
     for label in @yLabels
-      canvas.color(@options.labelColor)
+      canvas.backgroundColor(@options.backgroundColor).color(@options.labelColor)
       canvas.at(0, label.y + yOffset).write(label.label)
 
   drawXLabels: (canvas, yOffset) ->
     for label in @xLabels
-      canvas.color(@options.labelColor)
+      canvas.backgroundColor(@options.backgroundColor).color(@options.labelColor)
       canvas.at(label.x + X_MARGIN - 2, @graph.height + yOffset + 1).write(label.label)
 
   drawGrid: (canvas, yOffset) ->
@@ -129,19 +129,21 @@ class AnsiGraph
     canvas.backgroundColor(@options.backgroundColor).color(@options.gridColor)
     # left edge
     for y in [0 ... @graph.height]
-      canvas.at(X_MARGIN - 1, y + yOffset).write(if yLines[y] then font.uprightdown else font["|"])
+      canvas.at(X_MARGIN - 1, y + yOffset).write(font["|"])
     # bottom edge
     for x in [0 ... @graph.width]
       canvas.at(x + X_MARGIN, @graph.height + yOffset).write(if xLines[x] then font.uprightleft else font["-"])
     # lower left corner
     canvas.at(X_MARGIN - 1, @graph.height + yOffset).write(font.upright)
     # horizontal highlight lines
+    canvas.backgroundColor(@options.backgroundHighlightColor)
     for y in Object.keys(yLines).map((n) -> parseInt(n))
       for x in [0 ... @graph.width]
-        canvas.at(x + X_MARGIN, y + yOffset).write(font["-"])
+        canvas.at(x + X_MARGIN, y + yOffset).write(" ")
     for x in Object.keys(xLines).map((n) -> parseInt(n))
       for y in [0 ... @graph.height]
-        canvas.at(x + X_MARGIN, y + yOffset).write(if yLines[y] then font["+"] else font["|"])
+        canvas.backgroundColor(if yLines[y] then @options.backgroundHighlightColor else @options.backgroundColor)
+        canvas.at(x + X_MARGIN, y + yOffset).write(font["|"])
 
 
 exports.AnsiGraph = AnsiGraph
