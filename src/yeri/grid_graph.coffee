@@ -26,10 +26,14 @@ class GridGraph
     @bottom = if @options.scaleToZero then 0 else @scaled.minimum()
     @top = @scaled.maximum()
     if @height > 8
-      # leave a 1-unit gap at the top & bottom
-      @interval = (@top - @bottom) / (@height - 3)
+      if @bottom > 0
+        # leave a 1-unit gap at the top & bottom
+        @interval = (@top - @bottom) / (@height - 3)
+        @bottom -= @interval
+      else 
+        # just the top
+        @interval = (@top - @bottom) / (@height - 2)
       @top += @interval
-      @bottom -= @interval
     else
       @interval = (@top - @bottom) / (@height - 1)
 

@@ -157,7 +157,7 @@ class SvgGraph
 
   drawLegend: (index, name, color) ->
     total = Object.keys(@dataTable.datasets).length
-    leftColumn = Math.round(total / 2)
+    leftColumn = Math.ceil(total / 2)
     y = @legendBox.y + (@options.fontSize + @options.innerPadding) * (index % leftColumn)
     x = @legendBox.x + (@legendBox.width / 2) * Math.floor(index / leftColumn)
     colorBox = { x: x, y: y, width: @options.fontSize, height: @options.fontSize }
