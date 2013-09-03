@@ -10,7 +10,6 @@ DEFAULT_OPTIONS =
   backgroundColor: "335"
   backgroundHighlightColor: "333"
   gridColor: "555"
-  gridColor2: "444"
   labelColor: "077"
   titleColor: "c8f"
 
@@ -43,13 +42,9 @@ class AnsiGraph
       x = Math.round((X_MARGIN + @options.width - @options.title.length) / 2)
       canvas.color(@options.titleColor).at(x, 0).write(@options.title)
 
-    # borders
-    canvas.backgroundColor(@options.backgroundColor).color(@options.gridColor)
-    for y in [0 ... @graph.height] then canvas.at(X_MARGIN - 1, y + yOffset).write("|")
-    for x in [0 ... @graph.width] then canvas.at(x + X_MARGIN, @graph.height + yOffset).write("-")
-    canvas.at(X_MARGIN - 1, @graph.height + yOffset).write("+")
-
     @computeYLabels()
+    @computeXLabels()
+    @drawGrid(canvas, yOffset)
     @drawYLabels(canvas, yOffset)
     @drawXLabels(canvas, yOffset)
 
@@ -62,7 +57,7 @@ class AnsiGraph
 
     # legend?
     if @options.showLegend?
-      total = Object.keys(@graph.dataTable.datasets).length
+      total = names.length
       leftColumn = Math.ceil(total / 2)
       for name, i in names
         color = @options.colors[names.indexOf(name) % @options.colors.length]
@@ -92,34 +87,61 @@ class AnsiGraph
         lastLabel = label
     @yLabels
 
-  drawYLabels: (canvas, yOffset) ->
-    for label in @yLabels
-      canvas.color(@options.labelColor)
-      canvas.at(0, label.y + yOffset).write(label.label)
-      # highlight lines
-      canvas.color(@options.gridColor2)
-      for x in [0 ... @graph.width]
-        canvas.at(x + X_MARGIN, label.y + yOffset).write("-")
-
-  drawXLabels: (canvas, yOffset) ->
+  computeXLabels: ->
     dataTable = @graph.scaled
     roundedTimes = dataTable.roundedTimes()
+    @xLabels = []
     format = if dataTable.totalInterval > (2 * 24 * 60 * 60) then "%m/%d" else "%H:%M"
     x = 0
     while x < @graph.width - 4
       delta = roundedTimes[x]
       if delta?
         date = new Date((dataTable.timestamps[x] + delta) * 1000)
-        canvas.color(@options.labelColor)
-        canvas.at(x + X_MARGIN - 2, @graph.height + yOffset + 1).write(strftime.strftime(format, date))
-        for y in [0 ... @graph.height]
-          console.log util.inspect(@yLabels.filter((label) -> label.y == y))
-          ch = if @yLabels.filter((label) -> label.y == y).length > 0 then "+" else "|"
-          canvas.color(@options.gridColor2)
-          canvas.at(x + X_MARGIN, y + yOffset).write(ch)
-        x += 6
-      else
-        x += 1
+        label = strftime.strftime(format, date)
+        @xLabels.push { x: x, label: label }
+        x += label.length
+      x += 1
+    @xLabels
+
+  drawYLabels: (canvas, yOffset) ->
+    for label in @yLabels
+      canvas.color(@options.labelColor)
+      canvas.at(0, label.y + yOffset).write(label.label)
+
+  drawXLabels: (canvas, yOffset) ->
+    for label in @xLabels
+      canvas.color(@options.labelColor)
+      canvas.at(label.x + X_MARGIN - 2, @graph.height + yOffset + 1).write(label.label)
+
+  drawGrid: (canvas, yOffset) ->
+    xLines = {}
+    yLines = {}
+    for label in @xLabels then xLines[label.x] = true
+    for label in @yLabels then yLines[label.y] = true
+    font =
+      "|": "\u2502"
+      "+": "\u253c"
+      "-": "\u2500"
+      upright: "\u2514"
+      uprightdown: "\u251c"
+      uprightleft: "\u2534"
+
+    canvas.backgroundColor(@options.backgroundColor).color(@options.gridColor)
+    # left edge
+    for y in [0 ... @graph.height]
+      canvas.at(X_MARGIN - 1, y + yOffset).write(if yLines[y] then font.uprightdown else font["|"])
+    # bottom edge
+    for x in [0 ... @graph.width]
+      canvas.at(x + X_MARGIN, @graph.height + yOffset).write(if xLines[x] then font.uprightleft else font["-"])
+    # lower left corner
+    canvas.at(X_MARGIN - 1, @graph.height + yOffset).write(font.upright)
+    # horizontal highlight lines
+    for y in Object.keys(yLines).map((n) -> parseInt(n))
+      for x in [0 ... @graph.width]
+        canvas.at(x + X_MARGIN, y + yOffset).write(font["-"])
+    for x in Object.keys(xLines).map((n) -> parseInt(n))
+      for y in [0 ... @graph.height]
+        canvas.at(x + X_MARGIN, y + yOffset).write(if yLines[y] then font["+"] else font["|"])
 
 
 exports.AnsiGraph = AnsiGraph
