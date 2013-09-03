@@ -13,6 +13,7 @@ DEFAULT_OPTIONS =
   gridColor: "555"
   labelColor: "077"
   titleColor: "c8f"
+  showLegend: true
 
 X_MARGIN = 7
 Y_MARGIN = 2

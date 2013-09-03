@@ -39,7 +39,7 @@ DEFAULT_OPTIONS =
   titleFontSize: 25
   titleFontBaseline: 5
   title: null
-
+  showLegend: true
 
 class SvgGraph
   constructor: (@dataTable, options = {}) ->
@@ -89,15 +89,15 @@ class SvgGraph
       width: @graphBox.width
       height: @legendLines * @options.fontSize + (@options.innerPadding * (@legendLines - 1))
     @legendBox.y = @options.pixelHeight - @options.padding - @legendBox.height
+    if not @options.showLegend then @legendBox.height = 0
     # x-axis labels are above the legend box
     @xLabelBox =
       x: @graphBox.x
       width: @graphBox.width
       height: @options.fontSize
-    @xLabelBox.y = @legendBox.y - @options.padding - @xLabelBox.height
+    @xLabelBox.y = (if @options.showLegend then @legendBox.y else @options.pixelHeight) - @options.padding - @xLabelBox.height
     @graphBox.height = @xLabelBox.y - @options.innerPadding - @graphBox.y
     @yLabelBox.height = @graphBox.height
-
 
   draw: ->
     content = [ @drawTitleBox(), @drawGraphBox(), new svg.Compound(@drawYLabels()), new svg.Compound(@drawXLabels()) ]
@@ -107,7 +107,7 @@ class SvgGraph
       dataset = @dataTable.datasets[name]
       color = @options.colors[colorIndex]
       content.push @drawDataset(dataset, color)
-      content.push @drawLegend(index, name, color)
+      if @options.showLegend then content.push @drawLegend(index, name, color)
       colorIndex = (colorIndex + 1) % @options.colors.length
       index += 1
     svg.build(@options, content)
