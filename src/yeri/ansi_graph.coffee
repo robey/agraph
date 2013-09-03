@@ -8,6 +8,7 @@ GridGraph = require("./grid_graph").GridGraph
 DEFAULT_OPTIONS =
   colors: [ "red", "blue", "orange", "#080", "#c6c", "yellow" ]
   backgroundColor: "335"
+  graphBackgroundColor: "#000"
   backgroundHighlightColor: "333"
   gridColor: "555"
   labelColor: "077"
@@ -41,6 +42,9 @@ class AnsiGraph
       yOffset += 1
       x = Math.round((X_MARGIN + @options.width - @options.title.length) / 2)
       canvas.color(@options.titleColor).at(x, 0).write(@options.title)
+
+    canvas.backgroundColor(@options.graphBackgroundColor)
+    for y in [0 ... @graph.height] then for x in [0 ... @graph.width] then canvas.at(x + X_MARGIN, y + yOffset).write(" ")
 
     @computeYLabels()
     @computeXLabels()
@@ -142,7 +146,7 @@ class AnsiGraph
         canvas.at(x + X_MARGIN, y + yOffset).write(" ")
     for x in Object.keys(xLines).map((n) -> parseInt(n))
       for y in [0 ... @graph.height]
-        canvas.backgroundColor(if yLines[y] then @options.backgroundHighlightColor else @options.backgroundColor)
+        canvas.backgroundColor(if yLines[y] then @options.backgroundHighlightColor else @options.graphBackgroundColor)
         canvas.at(x + X_MARGIN, y + yOffset).write(font["|"])
 
 
