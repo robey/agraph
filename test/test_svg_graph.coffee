@@ -1,7 +1,8 @@
 should = require 'should'
-time_series = require "../src/agraph/time_series"
-svg_graph = require "../src/agraph/svg_graph"
-inspect = require("util").inspect
+util = require 'util'
+
+time_series = require "../src/yeri/time_series"
+svg_graph = require "../src/yeri/svg_graph"
 
 describe "SvgGraph", ->
   Data1 = new time_series.DataTable(

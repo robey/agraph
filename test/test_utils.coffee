@@ -1,8 +1,9 @@
 should = require 'should'
-utils = require '../src/agraph/utils'
-inspect = require("util").inspect
+util = require 'util'
 
-describe "util", ->
+utils = require "../src/yeri/utils"
+
+describe "utils", ->
   it "humanize", ->
     utils.humanize(0).should.eql "    0"
     utils.humanize(1).should.eql "    1"

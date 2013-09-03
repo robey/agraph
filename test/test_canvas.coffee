@@ -1,6 +1,7 @@
 should = require 'should'
-canvas = require '../src/agraph/canvas'
-inspect = require("util").inspect
+util = require 'util'
+
+canvas = require "../src/yeri/canvas"
 
 WHITE_ON_BLACK = "\u001b[48;5;0m\u001b[38;5;15m"
 SET_FG_GREEN = "\u001b[38;5;2m"

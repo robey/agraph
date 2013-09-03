@@ -1,7 +1,8 @@
 should = require 'should'
-time_series = require '../src/agraph/time_series'
-grid_graph = require '../src/agraph/grid_graph'
-inspect = require("util").inspect
+util = require 'util'
+
+time_series = require "../src/yeri/time_series"
+grid_graph = require "../src/yeri/grid_graph"
 
 describe "GridGraph", ->
   it "can compute boundaries", ->

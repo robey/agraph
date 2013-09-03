@@ -1,6 +1,7 @@
 should = require 'should'
-xterm256 = require '../src/agraph/xterm256'
-inspect = require("util").inspect
+util = require 'util'
+
+xterm256 = require "../src/yeri/xterm256"
 
 describe "xterm256", ->
   describe "finds the nearest", ->

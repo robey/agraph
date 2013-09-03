@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "optimist": "*",
+    "q": "*",
     "request": "*",
     "strftime": "*"
   },

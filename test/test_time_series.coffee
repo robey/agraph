@@ -1,6 +1,7 @@
 should = require 'should'
-time_series = require '../src/agraph/time_series'
-inspect = require("util").inspect
+util = require 'util'
+
+time_series = require "../src/yeri/time_series"
 
 describe "DataCollection", ->
   it "can sort two datasets", ->

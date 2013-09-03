@@ -1,7 +1,7 @@
 should = require 'should'
 util = require 'util'
 
-svg = require "../src/agraph/svg"
+svg = require "../src/yeri/svg"
 
 describe "Svg", ->
   describe "Line", ->
