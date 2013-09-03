@@ -10,6 +10,7 @@ DEFAULT_OPTIONS =
   backgroundColor: "335"
   backgroundHighlightColor: "333"
   gridColor: "555"
+  gridColor2: "444"
   labelColor: "077"
   titleColor: "c8f"
 
@@ -48,8 +49,9 @@ class AnsiGraph
     for x in [0 ... @graph.width] then canvas.at(x + X_MARGIN, @graph.height + yOffset).write("-")
     canvas.at(X_MARGIN - 1, @graph.height + yOffset).write("+")
 
-    @drawXLabels(canvas, yOffset)
+    @computeYLabels()
     @drawYLabels(canvas, yOffset)
+    @drawXLabels(canvas, yOffset)
 
     # draw the graph now.
     names = @graph.scaled.sortedNames()
@@ -77,26 +79,29 @@ class AnsiGraph
   # draw labels along the Y axis, but always skip at least one space between labels, so they don't crowd together, and
   # don't draw the same value twice. build up a list of indices where we drew labels, so we can draw little highlight
   # lines in the background.
-  drawYLabels: (canvas, yOffset) ->
-    canvas.color(@options.labelColor)
-    yLabels = @graph.yValues().map(utils.humanize)
+  computeYLabels: ->
+    labels = @graph.yValues().map(utils.humanize)
     lastIndex = -999
     lastLabel = ""
-    labelIndexes = []
+    @yLabels = []
     for y in [0 ... @graph.height]
-      label = yLabels[@graph.height - y - 1]
+      label = labels[@graph.height - y - 1]
       if not (lastIndex == y - 1 or label == lastLabel)
-        canvas.at(0, y + yOffset).write(label)
+        @yLabels.push { y: y, label: label }
         lastIndex = y
         lastLabel = label
-        labelIndexes.push y
+    @yLabels
 
-    # highlight lines
-    canvas.backgroundColor(@options.backgroundHighlightColor)
-    for y in labelIndexes then for x in [0 ... @graph.width] then canvas.at(x + X_MARGIN, y + yOffset).write(" ")
+  drawYLabels: (canvas, yOffset) ->
+    for label in @yLabels
+      canvas.color(@options.labelColor)
+      canvas.at(0, label.y + yOffset).write(label.label)
+      # highlight lines
+      canvas.color(@options.gridColor2)
+      for x in [0 ... @graph.width]
+        canvas.at(x + X_MARGIN, label.y + yOffset).write("-")
 
   drawXLabels: (canvas, yOffset) ->
-    canvas.color(@options.labelColor)
     dataTable = @graph.scaled
     roundedTimes = dataTable.roundedTimes()
     format = if dataTable.totalInterval > (2 * 24 * 60 * 60) then "%m/%d" else "%H:%M"
@@ -105,7 +110,13 @@ class AnsiGraph
       delta = roundedTimes[x]
       if delta?
         date = new Date((dataTable.timestamps[x] + delta) * 1000)
+        canvas.color(@options.labelColor)
         canvas.at(x + X_MARGIN - 2, @graph.height + yOffset + 1).write(strftime.strftime(format, date))
+        for y in [0 ... @graph.height]
+          console.log util.inspect(@yLabels.filter((label) -> label.y == y))
+          ch = if @yLabels.filter((label) -> label.y == y).length > 0 then "+" else "|"
+          canvas.color(@options.gridColor2)
+          canvas.at(x + X_MARGIN, y + yOffset).write(ch)
         x += 6
       else
         x += 1
