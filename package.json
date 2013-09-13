@@ -20,6 +20,7 @@
     "test": "plz --color -v test"
   },
   "dependencies": {
+    "antsy": "*",
     "optimist": "*",
     "q": "*",
     "request": "*",

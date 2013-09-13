@@ -1,6 +1,6 @@
 util = require 'util'
+
 utils = require "./utils"
-canvas = require "./canvas"
 
 MINUTES = 60
 HOURS = 60 * MINUTES

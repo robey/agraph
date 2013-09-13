@@ -1,9 +1,9 @@
+antsy = require 'antsy'
 strftime = require 'strftime'
 util = require 'util'
 
 utils = require "./utils"
-Canvas = require("./canvas").Canvas
-GridGraph = require("./grid_graph").GridGraph
+;GridGraph = require("./grid_graph").GridGraph
 
 DEFAULT_OPTIONS =
   colors: [ "red", "blue", "orange", "#080", "#c6c", "yellow" ]
@@ -34,7 +34,7 @@ class AnsiGraph
 
   draw: ->
     @graph.draw()
-    canvas = new Canvas(@options.width, @options.height)
+    canvas = new antsy.Canvas(@options.width, @options.height)
     canvas.fillBackground(@options.backgroundColor)
 
     # title?
