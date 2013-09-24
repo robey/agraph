@@ -13,6 +13,8 @@ USAGE = """
 Usage: yeri [options] <url(s)/filename(s)...>
 """
 
+DEFAULT_DELAY = 5
+
 optimist = optimist
   .usage(USAGE)
   .options("svg", describe: "generate an SVG file (to stdout)")
@@ -22,8 +24,11 @@ optimist = optimist
   .options("colors", alias: "c", describe: "set list of colors to cycle through")
   .options("fill", alias: "f", describe: "fill graph below line", default: defaults.DEFAULT_OPTIONS.fill)
   .options("zero", alias: "z", describe: "zero-base the Y axis", default: defaults.DEFAULT_OPTIONS.scaleToZero)
+  .options("monitor", alias: "m", describe: "monitor mode: display the same query continuously")
+  .options("delay", alias: "d", describe: "delay (in seconds) for monitor mode", default: DEFAULT_DELAY)
   .options("legend", describe: "show legend underneath graph", default: defaults.DEFAULT_OPTIONS.showLegend)
   .options("theme", describe: "select color theme")
+  .boolean([ "monitor", "m" ])
 
 
 exports.main = ->
@@ -53,6 +58,28 @@ exports.main = ->
   options.extend(defaults.THEMES[argv.theme])
   if argv.colors? then options.colors = argv.colors.split(",")
 
+  displayGraphs(urls, options).then ->
+    process.exit(0)
+  .done()
+
+# ----- internals
+
+displayGraphs = (urls, options) ->
+  fetchData(urls).then (collection) ->
+    if optimist.argv.svg
+      svg = new SvgGraph(collection.toTable(), options).draw()
+      console.log svg
+    else
+      canvas = new AnsiGraph(collection.toTable(), options).draw()
+      if optimist.argv.monitor then process.stdout.write("\u001b[2J\u001b[H")
+      for line in canvas.toStrings() then process.stdout.write(line + "\n")
+  .then ->
+    if optimist.argv.monitor
+      Q.delay(optimist.argv.delay * 1000).then -> displayGraphs(urls, options)
+    else
+      Q()
+
+fetchData = (urls) ->
   collection = new time_series.DataCollection()
   work = for url in urls
     (if (not url.match(/^https?:/)?) and fs.existsSync(url) then readFileQ(url) else get(url))
@@ -62,16 +89,7 @@ exports.main = ->
       console.log "ERROR: #{error}"
       process.exit 1
   Q.all(work).then ->
-    if argv.svg
-      svg = new SvgGraph(collection.toTable(), options).draw()
-      console.log svg
-    else
-      canvas = new AnsiGraph(collection.toTable(), options).draw()
-      for line in canvas.toStrings() then console.log(line)
-    process.exit(0)
-  .done()
-
-# ----- internals
+    collection
 
 get = (url) ->
   rv = Q.defer()
