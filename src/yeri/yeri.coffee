@@ -28,37 +28,53 @@ optimist = optimist
   .options("delay", alias: "d", describe: "delay (in seconds) for monitor mode", default: DEFAULT_DELAY)
   .options("legend", describe: "show legend underneath graph", default: defaults.DEFAULT_OPTIONS.showLegend)
   .options("theme", describe: "select color theme")
-  .boolean([ "monitor", "m" ])
+  .options("graphite", alias: "g", describe: "fetch from a graphite server (assume command-line parameters are targets")
+  .options("server", alias: "s", describe: "(for -g) specify graphite host location")
+  .options("from", describe: "(for -g) specify 'from' parameter to graphite")
+  .options("until", describe: "(for -g) specify 'until' parameter to graphite")
+  .boolean([ "monitor", "m", "graphite", "g" ])
 
 
 exports.main = ->
-  argv = optimist.argv
-  urls = argv._
-  if argv.help or urls.length == 0
-    console.log optimist.help()
-    process.exit 0
+  readYerirc()
+  .then (argv) ->
+    console.log util.inspect(optimist.options)
+    for k, v of optimist.argv then argv[k] = v
+    urls = argv._
+    if argv.help or urls.length == 0
+      console.log optimist.help()
+      process.exit 0
 
-  options = {}
-  for k, v of (if argv.svg then defaults.DEFAULT_SVG_OPTIONS else defaults.DEFAULT_ANSI_OPTIONS) then options[k] = v
-  options.width = argv.width
-  options.height = argv.height
-  options.title = argv.title
-  options.fill = argv.fill
-  options.scaleToZero = argv.zero
-  options.showLegend = argv.legend
+    options = {}
+    for k, v of (if argv.svg then defaults.DEFAULT_SVG_OPTIONS else defaults.DEFAULT_ANSI_OPTIONS) then options[k] = v
+    options.width = argv.width
+    options.height = argv.height
+    options.title = argv.title
+    options.fill = argv.fill
+    options.scaleToZero = argv.zero
+    options.showLegend = argv.legend
 
-  if argv.theme?
-    if not defaults.THEMES[argv.theme]?
-      console.log "ERROR: No such theme: #{argv.theme}"
-      console.log "Available themes: #{Object.keys(defaults.THEMES).sort().join(', ')}"
-      process.exit 1
-  else
-    argv.theme = if argv.svg then "light" else "dark"
+    if argv.theme?
+      if not defaults.THEMES[argv.theme]?
+        console.log "ERROR: No such theme: #{argv.theme}"
+        console.log "Available themes: #{Object.keys(defaults.THEMES).sort().join(', ')}"
+        process.exit 1
+    else
+      argv.theme = if argv.svg then "light" else "dark"
 
-  options.extend(defaults.THEMES[argv.theme])
-  if argv.colors? then options.colors = argv.colors.split(",")
+    options.extend(defaults.THEMES[argv.theme])
+    if argv.colors? then options.colors = argv.colors.split(",")
 
-  displayGraphs(urls, options).then ->
+    if argv.graphite then urls = urls.map (url) ->
+      if url.match(/^http(s?):/)? or url.indexOf("/") >= 0
+        url
+      else
+        "http://#{argv.server}/render?format=json&target=#{url}" +
+          (if argv.from then "&from=" + encodeURIComponent(argv.from) else "") +
+          (if argv["until"] then "&until=" + encodeURIComponent(argv["until"]) else "")
+
+    displayGraphs(urls, options)
+  .then ->
     process.exit(0)
   .done()
 
@@ -103,11 +119,22 @@ get = (url) ->
     rv.resolve(body)
   rv.promise
 
+readYerirc = ->
+  # read .yerirc if present
+  user_home = process.env["HOME"] or process.env["USERPROFILE"]
+  yerirc = "#{user_home}/.yerirc"
+  if fs.existsSync(yerirc)
+    readFileQ(yerirc).then (data) ->
+      JSON.parse(data.toString())
+    .fail (error) ->
+      console.log "ERROR reading .yerirc: #{error}"
+      process.exit 1
+  else
+    Q({})
+
 readFileQ = (filename) ->
   rv = Q.defer()
   fs.readFile filename, (error, data) ->
-    if error?
-      rv.reject(error)
-      return
+    if error? then return rv.reject(error)
     rv.resolve(data)
   rv.promise
