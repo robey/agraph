@@ -38,7 +38,6 @@ optimist = optimist
 exports.main = ->
   readYerirc()
   .then (argv) ->
-    console.log util.inspect(optimist.options)
     for k, v of optimist.argv then argv[k] = v
     urls = argv._
     if argv.help or urls.length == 0
