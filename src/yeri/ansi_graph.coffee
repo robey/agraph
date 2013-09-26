@@ -55,6 +55,7 @@ class AnsiGraph
 
     # draw the graph now.
     names = @graph.scaled.sortedNames()
+    if @options.stacked then names = names.reverse()
     @graph.map (x) => if x? then @options.colors[names.indexOf(x) % @options.colors.length] else null
     for y in [0 ... @graph.height] then for x in [0 ... @graph.width]
       color = @graph.get(x, y)

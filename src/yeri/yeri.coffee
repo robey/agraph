@@ -25,6 +25,7 @@ optimist = optimist
   .options("title", alias: "t", describe: "title of the graph")
   .options("colors", alias: "c", describe: "set list of colors to cycle through")
   .options("fill", alias: "f", describe: "fill graph below line", default: defaults.DEFAULT_OPTIONS.fill)
+  .options("stacked", alias: "S", describe: "stack graphs on top of each other")
   .options("zero", alias: "z", describe: "zero-base the Y axis", default: defaults.DEFAULT_OPTIONS.scaleToZero)
   .options("top", describe: "manually set the top edge of the visible graph")
   .options("bottom", describe: "manually set the bottom edge of the visible graph")
@@ -37,7 +38,7 @@ optimist = optimist
   .options("from", describe: "(for -g) specify 'from' parameter to graphite")
   .options("until", describe: "(for -g) specify 'until' parameter to graphite")
   .options("debug", describe: "extra debug logging")
-  .boolean([ "monitor", "m", "graphite", "g", "debug" ])
+  .boolean([ "monitor", "m", "graphite", "g", "debug", "stack", "S" ])
 
 exports.main = ->
   readYerirc()
@@ -54,6 +55,7 @@ exports.main = ->
     options.height = argv.height
     options.title = argv.title
     options.fill = argv.fill
+    options.stacked = argv.stacked
     options.scaleToZero = argv.zero
     options.top = utils.dehumanize(argv.top)
     options.bottom = utils.dehumanize(argv.bottom)

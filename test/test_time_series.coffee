@@ -92,6 +92,7 @@ describe "DataTable", ->
     )
     d.minimum().should.eql 1
     d.maximum().should.eql 20
+    d.maximumStacked().should.eql 24
 
   it "is okay with missing elements", ->
     d = new time_series.DataTable(
@@ -101,6 +102,7 @@ describe "DataTable", ->
     )
     d.minimum().should.eql 4
     d.maximum().should.eql 20
+    d.maximumStacked().should.eql 22
 
   it "calculates rounded times", ->
     d = new time_series.DataTable([ 50, 80, 110, 140, 170 ])

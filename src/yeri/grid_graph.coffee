@@ -5,8 +5,7 @@ DEFAULT_OPTIONS =
   height: 20
   scaleToZero: false
   fill: true
-
-# FIXME stack graph?
+  stacked: false
 
 # Plot a DataTable into a grid of distinct x/y points, suitable for a character display.
 # Drawing to an ansi canvas is done in AnsiGraph.
@@ -26,7 +25,8 @@ class GridGraph
     return if @scaled?
     @scaled = @dataTable.toDataPoints(@width)
     @bottom = if @options.scaleToZero then 0 else @scaled.minimum()
-    @top = utils.roundToPrecision(@scaled.maximum(), 2, "ceil")
+    maximum = if @options.stacked then @scaled.maximumStacked() else @scaled.maximum()
+    @top = utils.roundToPrecision(maximum, 2, "ceil")
     if @options.bottom? then @bottom = @options.bottom
     if @options.top? then @top = @options.top
     if @top == @bottom then @top = @bottom + 1
@@ -38,14 +38,25 @@ class GridGraph
 
   draw: ->
     @prepare()
-    for name in @scaled.sortedNames()
+    offsets = []
+    fillOffsets = []
+    names = @scaled.sortedNames()
+    if @options.stacked then names = names.reverse()
+    for name in names
       dataset = @scaled.datasets[name]
       for x in [0 ... @width]
-        y = Math.round((dataset[x] - @bottom) / @interval)
+        yDot = dataset[x]
+        if @options.stacked and offsets[x]? then yDot += offsets[x]
+        y = Math.round((yDot - @bottom) / @interval)
         if y >= 0
           if y >= @height then y = @height
           @put(x, y, name)
-          if @options.fill then for yy in [0 ... y] then @put(x, yy, name)
+          if @options.fill
+            yBase = 0
+            if @options.stacked and fillOffsets[x]? then yBase += fillOffsets[x] + 1
+            for yy in [yBase ... y] then @put(x, yy, name)
+        offsets[x] = yDot
+        fillOffsets[x] = y
 
   put: (x, y, value) -> @grid[y * @width + x] = value
 

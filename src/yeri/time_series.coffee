@@ -98,10 +98,13 @@ class DataTable
     rv.join("\n") + "\n"
 
   minimum: ->
-    Math.min.apply(Math, (for name, dataset of @datasets then Math.min.apply(Math, dataset.filter((n) -> n?))))
+    min(for name, dataset of @datasets then min(dataset.filter((n) -> n?)))
 
   maximum: ->
-    Math.max.apply(Math, (for name, dataset of @datasets then Math.max.apply(Math, dataset.filter((n) -> n?))))
+    max(for name, dataset of @datasets then max(dataset.filter((n) -> n?)))
+
+  maximumStacked: ->
+    max(for i in [0 ... @timestamps.length] then (for name, dataset of @datasets then dataset[i] or 0).reduce((a, b) -> a + b))
 
   # for each time interval, if it contains a timestamp that can be rounded to a "nice" granularity, return the amount
   # to add to the interval to make it nice. if it doesn't cover a good timestamp, return null.
@@ -179,6 +182,9 @@ class DataTable
     right = Math.max(0, Math.min(@last, Math.ceil(ratio * @last)))
     [ left, right ]
 
+
+min = (a) -> Math.min.apply(Math, a)
+max = (a) -> Math.max.apply(Math, a)
 
 exports.DataCollection = DataCollection
 exports.DataTable = DataTable
