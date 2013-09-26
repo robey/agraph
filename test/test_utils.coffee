@@ -5,11 +5,11 @@ utils = require "../src/yeri/utils"
 
 describe "utils", ->
   it "humanize", ->
-    utils.humanize(0).should.eql "    0"
-    utils.humanize(1).should.eql "    1"
-    utils.humanize(109).should.eql "  109"
-    utils.humanize(999).should.eql "  999"
-    utils.humanize(1000).should.eql " 1000"
+    utils.humanize(0).should.eql "     0"
+    utils.humanize(1).should.eql "     1"
+    utils.humanize(109).should.eql "   109"
+    utils.humanize(999).should.eql "   999"
+    utils.humanize(1000).should.eql "  1000"
     utils.humanize(1001).should.eql "1.001K"
     utils.humanize(1024).should.eql "1.024K"
     utils.humanize(9999).should.eql "9.999K"
@@ -26,6 +26,7 @@ describe "utils", ->
     utils.humanize(0.00001).should.eql "   10u"
     utils.humanize(0.000001).should.eql "    1u"
     utils.humanize(0.0000001).should.eql "  100n"
+    utils.humanize(8700).should.eql "  8.7K"
 
   it "dehumanize", ->
     utils.dehumanize("123").should.eql 123
@@ -41,6 +42,8 @@ describe "utils", ->
     utils.roundToPrecision(123, 2, "ceil").should.eql 130
     utils.roundToPrecision(123, 3, "ceil").should.eql 123
     utils.roundToPrecision(0, 3).should.eql 0
+    utils.roundToPrecision(0.00914, 2).should.eql 0.0091
+    utils.roundToPrecision(4087123, 3).should.eql 4090000
 
   it "roundToCurrency", ->
     utils.roundToCurrency(0).should.eql 0

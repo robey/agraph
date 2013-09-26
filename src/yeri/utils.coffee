@@ -9,10 +9,18 @@ humanize = (number) ->
   while number < 1.0 and number != 0.0 and index > 0
     number *= 1000.0
     index -= 1
-  number = roundToPrecision(number, 4)
+  number = roundToPrecision(number, 4).toString()
   label = HUMAN_LABELS[index]
-  if label == " " then label = ""
-  lpad(number.toString()[...5], 5) + label
+  if label == " "
+    label = ""
+    width = 6
+  else
+    width = 5
+  if number.indexOf(".") > 0
+    # trickery to cope with javascript's "8.700000000000001"
+    number = number[...width]
+    while number.length > 1 and number[number.length - 1] == "0" then number = number[0 ... number.length - 1]
+  lpad(number[...width], width) + label
 
 dehumanize = (string) ->
   return null if not string?

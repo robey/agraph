@@ -76,21 +76,38 @@ class AnsiGraph
 
   # ----- internals
 
-  # draw labels along the Y axis, but always skip at least one space between labels, so they don't crowd together, and
-  # don't draw the same value twice. build up a list of indices where we drew labels, so we can draw little highlight
-  # lines in the background.
+  # draw labels along the Y axis.
+  # build up a list of indices where we drew labels, so we can draw little highlight lines in the background.
   computeYLabels: ->
-    labels = @graph.yValues().map(utils.humanize)
-    lastIndex = -999
-    lastLabel = ""
-    @yLabels = []
-    for y in [0 ... @graph.height]
-      label = labels[@graph.height - y - 1]
-      if not (lastIndex == y - 1 or label == lastLabel)
-        @yLabels.push { y: y, label: label }
-        lastIndex = y
-        lastLabel = label
+    yValues = @graph.yValues()
+    # top & bottom
+    @yLabels = [
+      { y: @graph.height - 1, label: utils.humanize(yValues[0]) }
+      { y: 0, label: utils.humanize(yValues[yValues.length - 1]) }
+    ]
+    # show no more than height/3 or 10 labels, because it gets too cluttery.
+    count = Math.floor(Math.min(@graph.height / 3, 10) - 1)
+    return @yLabels if count <= 0
+    winner = if count <= 3
+      { labels: @computeYLabelIntermediates(count) }
+    else
+      # let's try to find the "most pleasing" set of labels
+      winner = [3 ... count].map (i) =>
+        labels = @computeYLabelIntermediates(i)
+        pleasingScore = labels.reduce((a, b) -> a.pleasingScore + b.pleasingScore) / i
+        { labels, pleasingScore }
+      .reduce (a, b) ->
+        if a.pleasingScore > b.pleasingScore then a else b
+    @yLabels = @yLabels.concat(winner.labels)
     @yLabels
+
+  computeYLabelIntermediates: (count) ->
+    interval = (@graph.top - @graph.bottom) / count
+    [1 ... count].map (i) =>
+      desired = @graph.bottom + i * interval
+      label = utils.humanize(desired)
+      pleasingScore = label.match(/^\s*/)[0].length
+      { y: @graph.height - @graph.closestY(desired) - 1, label, pleasingScore }
 
   computeXLabels: ->
     dataTable = @graph.scaled

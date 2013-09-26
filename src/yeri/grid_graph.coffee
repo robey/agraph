@@ -1,3 +1,5 @@
+utils = require("./utils")
+
 DEFAULT_OPTIONS =
   width: 70
   height: 20
@@ -24,20 +26,11 @@ class GridGraph
     return if @scaled?
     @scaled = @dataTable.toDataPoints(@width)
     @bottom = if @options.scaleToZero then 0 else @scaled.minimum()
-    @top = @scaled.maximum()
+    @top = utils.roundToPrecision(@scaled.maximum(), 2, "ceil")
     if @options.bottom? then @bottom = @options.bottom
     if @options.top? then @top = @options.top
-    if @height > 8 and (not @options.top?) and (not @options.bottom?)
-      if @bottom > 0
-        # leave a 1-unit gap at the top & bottom
-        @interval = (@top - @bottom) / (@height - 3)
-        @bottom -= @interval
-      else 
-        # just the top
-        @interval = (@top - @bottom) / (@height - 2)
-      @top += @interval
-    else
-      @interval = (@top - @bottom) / (@height - 1)
+    if @top == @bottom then @top = @bottom + 1
+    @interval = (@top - @bottom) / (@height - 1)
 
   # run each grid element through a transformation function.
   map: (f) ->
@@ -61,6 +54,9 @@ class GridGraph
 
   yValues: ->
     [0 ... @height].map (i) => @bottom + i * @interval
+
+  closestY: (value) ->
+    Math.round((value - @bottom) / @interval)
 
   dump: ->
     lines = for y in [0 ... @height]
