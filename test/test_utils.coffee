@@ -27,6 +27,12 @@ describe "utils", ->
     utils.humanize(0.000001).should.eql "    1u"
     utils.humanize(0.0000001).should.eql "  100n"
 
+  it "dehumanize", ->
+    utils.dehumanize("123").should.eql 123
+    utils.dehumanize("12K").should.eql 12000
+    utils.dehumanize("1.2G").should.eql 1.2e9
+    utils.dehumanize("123n").should.eql 1.23e-7
+
   it "roundToPrecision", ->
     utils.roundToPrecision(123, 1).should.eql 100
     utils.roundToPrecision(123, 2).should.eql 120

@@ -25,7 +25,9 @@ class GridGraph
     @scaled = @dataTable.toDataPoints(@width)
     @bottom = if @options.scaleToZero then 0 else @scaled.minimum()
     @top = @scaled.maximum()
-    if @height > 8
+    if @options.bottom? then @bottom = @options.bottom
+    if @options.top? then @top = @options.top
+    if @height > 8 and (not @options.top?) and (not @options.bottom?)
       if @bottom > 0
         # leave a 1-unit gap at the top & bottom
         @interval = (@top - @bottom) / (@height - 3)
@@ -47,8 +49,10 @@ class GridGraph
       dataset = @scaled.datasets[name]
       for x in [0 ... @width]
         y = Math.round((dataset[x] - @bottom) / @interval)
-        @put(x, y, name)
-        if @options.fill then for yy in [0 ... y] then @put(x, yy, name)
+        if y >= 0
+          if y >= @height then y = @height
+          @put(x, y, name)
+          if @options.fill then for yy in [0 ... y] then @put(x, yy, name)
 
   put: (x, y, value) -> @grid[y * @width + x] = value
 

@@ -6,6 +6,7 @@ util = require 'util'
 
 defaults = require "./defaults"
 time_series = require "./time_series"
+utils = require "./utils"
 AnsiGraph = require("./ansi_graph").AnsiGraph
 SvgGraph = require("./svg_graph").SvgGraph
 
@@ -14,6 +15,7 @@ Usage: yeri [options] <url(s)/filename(s)...>
 """
 
 DEFAULT_DELAY = 5
+
 
 optimist = optimist
   .usage(USAGE)
@@ -24,16 +26,18 @@ optimist = optimist
   .options("colors", alias: "c", describe: "set list of colors to cycle through")
   .options("fill", alias: "f", describe: "fill graph below line", default: defaults.DEFAULT_OPTIONS.fill)
   .options("zero", alias: "z", describe: "zero-base the Y axis", default: defaults.DEFAULT_OPTIONS.scaleToZero)
+  .options("top", describe: "manually set the top edge of the visible graph")
+  .options("bottom", describe: "manually set the bottom edge of the visible graph")
   .options("monitor", alias: "m", describe: "monitor mode: display the same query continuously")
   .options("delay", alias: "d", describe: "delay (in seconds) for monitor mode", default: DEFAULT_DELAY)
   .options("legend", describe: "show legend underneath graph", default: defaults.DEFAULT_OPTIONS.showLegend)
   .options("theme", describe: "select color theme")
-  .options("graphite", alias: "g", describe: "fetch from a graphite server (assume command-line parameters are targets")
+  .options("graphite", alias: "g", describe: "fetch from a graphite server (assume command-line parameters are targets)")
   .options("server", alias: "s", describe: "(for -g) specify graphite host location")
   .options("from", describe: "(for -g) specify 'from' parameter to graphite")
   .options("until", describe: "(for -g) specify 'until' parameter to graphite")
-  .boolean([ "monitor", "m", "graphite", "g" ])
-
+  .options("debug", describe: "extra debug logging")
+  .boolean([ "monitor", "m", "graphite", "g", "debug" ])
 
 exports.main = ->
   readYerirc()
@@ -51,6 +55,8 @@ exports.main = ->
     options.title = argv.title
     options.fill = argv.fill
     options.scaleToZero = argv.zero
+    options.top = utils.dehumanize(argv.top)
+    options.bottom = utils.dehumanize(argv.bottom)
     options.showLegend = argv.legend
 
     if argv.theme?
@@ -97,8 +103,10 @@ displayGraphs = (urls, options) ->
 fetchData = (urls) ->
   collection = new time_series.DataCollection()
   work = for url in urls
+    if optimist.argv.debug then console.log "fetching: #{url}"
     (if (not url.match(/^https?:/)?) and fs.existsSync(url) then readFileQ(url) else get(url))
     .then (data) ->
+      if optimist.argv.debug then console.log "data: #{data}"
       collection.loadFromGraphite(JSON.parse(data))
     .fail (error) ->
       console.log "ERROR: #{error}"

@@ -3,7 +3,7 @@ strftime = require 'strftime'
 util = require 'util'
 
 utils = require "./utils"
-;GridGraph = require("./grid_graph").GridGraph
+GridGraph = require("./grid_graph").GridGraph
 
 DEFAULT_OPTIONS =
   colors: [ "red", "blue", "orange", "#080", "#c6c", "yellow" ]

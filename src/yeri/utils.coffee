@@ -14,6 +14,14 @@ humanize = (number) ->
   if label == " " then label = ""
   lpad(number.toString()[...5], 5) + label
 
+dehumanize = (string) ->
+  return null if not string?
+  return 0 if string.length == 0
+  index = HUMAN_LABELS.indexOf(string[string.length - 1])
+  zero = HUMAN_LABELS.indexOf(" ")
+  return parseFloat(string) if index < 0
+  parseFloat(string) * Math.pow(1000, index - zero)
+
 roundToPrecision = (number, digits, op = "round") ->
   if number == 0 then return 0
   scale = digits - Math.floor(Math.log(number) / Math.log(10)) - 1
@@ -46,6 +54,7 @@ maxByKey = (keys, f) ->
 
 
 exports.humanize = humanize
+exports.dehumanize = dehumanize
 exports.roundToPrecision = roundToPrecision
 exports.roundToCurrency = roundToCurrency
 exports.maxByKey = maxByKey
