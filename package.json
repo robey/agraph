@@ -15,21 +15,23 @@
       "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
     }
   ],
-
   "scripts": {
-    "test": "plz --color -v test"
+    "prepublish": "6to5 --source-maps --out-dir lib src && 6to5 --source-maps --out-dir test/lib test/src",
+    "test": "mocha -R spec --colors test/lib"
   },
   "dependencies": {
     "antsy": "*",
+    "bluebird": "*",
+    "lodash": "*",
     "optimist": "*",
-    "q": "*",
     "request": "*",
     "strftime": "*"
   },
   "devDependencies": {
-    "coffee-script": "*",
+    "6to5": "*",
     "mocha": "*",
-    "should": "*"
+    "should": "*",
+    "source-map-support": "*"
   },
   "main": "./lib/yeri",
   "files": [
