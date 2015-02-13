@@ -49,6 +49,15 @@ class DataCollection {
     return this;
   }
 
+  // prometheus: { type: "matrix", value: [ ... ] }
+  // each value: { "metric": { "__name__": "channel_count" }, "values": [ [ ts, "y" ] ] }
+  loadFromPrometheus(data) {
+    if (data.type != "matrix") throw new Error("Unable to parse prometheus data");
+    data.value.forEach((metric) => {
+      this.addPoints(metric.metric.__name__, metric.values.map((datum) => [ datum[0], parseInt(datum[1]) ]));
+    });
+  }
+
   // normalize all the intervals and fill in blanks ("undefined") for missing data.
   // end result should be a perfect rectangle of data.
   toTable() {
