@@ -25,13 +25,13 @@
     "lodash": "*",
     "optimist": "*",
     "request": "*",
+    "source-map-support": "*",
     "strftime": "*"
   },
   "devDependencies": {
     "6to5": "*",
     "mocha": "*",
-    "should": "*",
-    "source-map-support": "*"
+    "should": "*"
   },
   "main": "./lib/yeri",
   "files": [
