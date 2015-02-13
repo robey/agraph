@@ -1,6 +1,6 @@
 {
   "name": "yeri",
-  "version": "0.1.0",
+  "version": "0.9.0",
   "description": "draw full-color (text or SVG) time-series graphs",
   "keywords": [ "graphite", "graph", "iyeriwok" ],
   "author": "Robey Pointer <robeypointer@gmail.com>",
