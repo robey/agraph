@@ -77,6 +77,7 @@ class Text {
     let extra = "";
     if (this.options.fontFamily) extra += `font-family="${this.options.fontFamily}" `;
     if (this.options.fontSize) extra += `font-size="${this.options.fontSize}" `;
+    if (this.options.fontWeight) extra += `font-weight="${this.options.fontWeight}" `;
     if (this.options.fill) extra += `fill="${this.options.fill}" `;
     if (this.options.textAnchor) extra += `text-anchor="${this.options.textAnchor}" `;
     if (this.options.clipPath) extra += `clip-path="url(#${this.options.clipPath})" `;
