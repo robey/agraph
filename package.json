@@ -16,7 +16,7 @@
     }
   ],
   "scripts": {
-    "prepublish": "6to5 --source-maps --out-dir lib src && 6to5 --source-maps --out-dir test/lib test/src",
+    "prepublish": "6to5 --source-maps --out-dir lib src && 6to5 --source-maps --out-dir test/lib test/src && browserify lib/yeri/embed.js > lib/embed.js",
     "test": "mocha -R spec --colors test/lib"
   },
   "dependencies": {
@@ -30,6 +30,7 @@
   },
   "devDependencies": {
     "6to5": "*",
+    "browserify": "*",
     "mocha": "*",
     "should": "*"
   },

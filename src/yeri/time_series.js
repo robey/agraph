@@ -240,8 +240,22 @@ class DataTable {
 }
 
 
-// min = (a) -> Math.min.apply(Math, a)
-// max = (a) -> Math.max.apply(Math, a)
+// given a list of json objects (one per dataset), build a DataTable suitable for graphing.
+function buildFromJsons(jsons) {
+  let collection = new DataCollection();
+  jsons.forEach((data) => {
+    if (data.type == "matrix") {
+      // prometheus
+      collection.loadFromPrometheus(data);
+    } else {
+      // graphite?
+      collection.loadFromGraphite(data);
+    }
+  });
+  return collection.toTable();
+}
 
-exports.DataCollection = DataCollection
-exports.DataTable = DataTable
+
+exports.buildFromJsons = buildFromJsons;
+exports.DataCollection = DataCollection;
+exports.DataTable = DataTable;
