@@ -256,19 +256,20 @@ class SvgGraph {
 
   computeXLines() {
     let roundedTimes = this.dataTable.roundedTimes();
-    let lastX = this.xLabelBox.x - (3 * this.options.fontSize);
+    let labelWidth = 4 * this.options.fontSize;
+    let rightEdge = this.graphBox.x + this.graphBox.width + (labelWidth / 1.5);
     let xLines = [];
     let helperLines = [];
-    _.range(roundedTimes.length).forEach((i) => {
+    _.range(roundedTimes.length).reverse().forEach((i) => {
       let delta = roundedTimes[i];
       if (delta != null) {
         let ts = this.dataTable.timestamps[i] + delta;
         let px = this.xToPixel(ts);
-        if (px < lastX + (4 * this.options.fontSize)) {
+        if (px > rightEdge - labelWidth) {
           helperLines.push(ts);
         } else {
           xLines.push(ts);
-          lastX = px;
+          rightEdge = px;
         }
       }
     });
