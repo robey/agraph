@@ -60,7 +60,7 @@ class DataCollection {
 
   // normalize all the intervals and fill in blanks ("undefined") for missing data.
   // end result should be a perfect rectangle of data.
-  toTable() {
+  toTable(lowTimestamp = null) {
     let tset = {};
     for (let name in this.data) {
       for (let ts in this.data[name]) {
@@ -72,9 +72,15 @@ class DataCollection {
       // calculate smallest interval, and fill in gaps so all intervals are equal.
       let deltas = _.range(1, timestamps.length).map((i) => timestamps[i] - timestamps[i - 1]);
       let interval = sortInts(deltas)[0];
+
+      // is there a lower bound we want to extend to?
+      if (lowTimestamp != null && lowTimestamp < timestamps[0]) {
+        let bound = timestamps[0] - Math.floor((timestamps[0] - lowTimestamp) / interval) * interval;
+        if (bound < timestamps[0]) timestamps.unshift(bound);
+      }
+
       for (let i = 1; i < timestamps.length; ) {
         if (timestamps[i] - timestamps[i - 1] > interval) {
-          if (timestamps[i] - timestamps[i - 1] > interval * 100) throw new Error("Data points are too distant on the time scale");
           timestamps.push(timestamps[i - 1] + interval);
           timestamps = sortInts(timestamps);
         } else {
@@ -241,7 +247,7 @@ class DataTable {
 
 
 // given a list of json objects (one per dataset), build a DataTable suitable for graphing.
-function buildFromJsons(jsons) {
+function buildFromJsons(jsons, options = {}) {
   let collection = new DataCollection();
   jsons.forEach((data) => {
     if (data.type == "matrix") {
@@ -252,7 +258,7 @@ function buildFromJsons(jsons) {
       collection.loadFromGraphite(data);
     }
   });
-  return collection.toTable();
+  return collection.toTable(options.leftTimestamp);
 }
 
 
