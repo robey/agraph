@@ -1,48 +1,39 @@
 {
   "name": "yeri",
-  "version": "0.9.0",
+  "version": "1.0.0",
   "description": "draw full-color (text or SVG) time-series graphs",
-  "keywords": [ "graphite", "graph", "iyeriwok" ],
+  "keywords": [
+    "graphite",
+    "graph",
+    "iyeriwok"
+  ],
   "author": "Robey Pointer <robeypointer@gmail.com>",
   "homepage": "https://github.com/robey/yeri",
   "repository": {
     "type": "git",
     "url": "git://github.com/robey/yeri.git"
   },
-  "licenses": [
-    {
-      "type": "Apache License 2.0",
-      "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
-    }
-  ],
+  "license": "Apache-2.0",
   "scripts": {
-    "prepublish": "6to5 --source-maps --out-dir lib src && 6to5 --source-maps --out-dir test/lib test/src && browserify lib/yeri/embed.js > lib/embed.js",
-    "test": "mocha -R spec --colors test/lib"
+    "build": "tsc",
+    "clean": "rm -rf lib",
+    "distclean": "npm run clean && rm -rf node_modules",
+    "test": "npm run build && mocha -R spec --colors --recursive lib/test"
   },
-  "dependencies": {
-    "antsy": "*",
-    "bluebird": "*",
-    "lodash": "*",
-    "optimist": "*",
-    "request": "*",
-    "source-map-support": "*",
-    "strftime": "*"
-  },
+  "dependencies": {},
   "devDependencies": {
-    "6to5": "*",
-    "browserify": "*",
-    "mocha": "*",
-    "should": "*"
+    "@types/mocha": "^7.0.2",
+    "mocha": "^7.2.0",
+    "should": "^13.2.3",
+    "source-map-support": "^0.5.19",
+    "typescript": "^3.9.3"
   },
-  "main": "./lib/yeri",
+  "main": "./lib/index.js",
   "files": [
-    "build.plz",
     "lib",
-    "bin/yeri",
-    "test"
+    "bin/yeri"
   ],
   "bin": {
     "yeri": "bin/yeri"
-  },
-  "preferGlobal": "true"
+  }
 }
