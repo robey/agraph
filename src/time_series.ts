@@ -12,17 +12,34 @@ export class Point {
   }
 }
 
+export interface CellData {
+  // how much (0 - 1) of the cell's width contains the line?
+  widthPercent: number[];
+
+  // how much (0 - 1) of the cell's area is beneath the line?
+  fillPercent: number[];
+}
+
+
 /*
  * a list of points, where the x axis is time (as a timestamp, in seconds),
  * and the x values are regularly spaced.
  * the y value may or m
  */
-export class Timeseries {
+export class TimeSeries {
   timestamps: number[] = [];
   values: MaybeNumber[] = [];
 
   constructor(public name: string) {
     // pass
+  }
+
+  static fromArrays(name: string, timestamps: number[], values: MaybeNumber[]): TimeSeries {
+    if (timestamps.length != values.length) throw new Error("timestamps and values must have the same length");
+    const rv = new TimeSeries(name);
+    rv.timestamps = timestamps;
+    rv.values = values;
+    return rv;
   }
 
   // add a set of [timestamp, value] points
@@ -39,6 +56,14 @@ export class Timeseries {
       this.timestamps.push(ts);
       this.values.push(v);
     }
+  }
+
+  min(): number {
+    return Math.min(...(this.values.filter(v => v !== undefined) as number[]));
+  }
+
+  max(): number {
+    return Math.max(...(this.values.filter(v => v !== undefined) as number[]));
   }
 
   // ensure timestamps are in order.
@@ -92,66 +117,134 @@ export class Timeseries {
     return this.toPoints().map(p => [ p.timestamp, p.value ]);
   }
 
+  /*
+   * re-sample the time series to match a specific interval, and optionally a
+   * new range. data values will be the same for timestamps that are the same
+   * after changing the interval. other data values are interpolated from the
+   * two points on either side.
+   */
   toInterval(
     interval: number,
     minimum: number = this.timestamps[0],
     maximum: number = this.timestamps[this.timestamps.length - 1] + interval,
     op: (values: number[]) => number = average
-  ): Timeseries {
-    const newTs: number[] = [];
-    const newV: MaybeNumber[] = [];
+  ): TimeSeries {
     this.sort();
-    for (const ts of range(minimum, maximum, interval)) {
-      newTs.push(ts);
-      newV.push(this.aggregate(ts - interval / 2, ts + interval / 2));
-    }
-
-    const rv = new Timeseries(this.name);
-    rv.timestamps = newTs;
-    rv.values = newV;
-    return rv;
+    const ts = range(minimum, maximum, interval);
+    const v = ts.map(t => this.interpolate(t));
+    return TimeSeries.fromArrays(this.name, ts, v);
   }
 
-  /*
-   * aggregate all the values within a timestamp range.
-   *   - if there are no values, interpolate instead.
-   *   - if there are values, but they're all missing, return undefined.
-   * otherwise, return the aggregate of all the values covered by the range.
-   * the default function is "area", but any operation may be used.
-   */
-  aggregate(
-    tsLeft: number,
-    tsRight: number,
-    op: (points: Point[]) => MaybeNumber = area
-  ): MaybeNumber {
-    // find data that's inside the range (left inclusive, right exclusive)
-    let left = binarySearch(this.timestamps, t => t >= tsLeft);
-    let right = binarySearch(this.timestamps, t => t > tsRight);
-    console.log(tsLeft, tsRight, left, right)
+  antialias(
+    width: number,
+    height: number,
+    top: number = this.max(),
+    bottom: number = 0,
+    left?: number,
+    right?: number,
+  ): CellData {
+    this.sort();
+    const ts = this.timestamps.slice();
+    const v = this.values.slice();
+    if (left === undefined) left = ts[0];
+    if (right === undefined) right = ts[ts.length - 1];
+    const cellWidth = (right - left) / width;
+    const cellHeight = (top - bottom) / height;
 
-    if (right == left) {
-      // no data points in here: interpolate, if possible.
-      return this.interpolate((tsLeft + tsRight) / 2);
+    // first, interpolate the value at every vertical border.
+    let i = 0;
+    for (const t of range(left, right, cellWidth)) {
+      while (ts[i] < t && i < ts.length) i++;
+      if (i < ts.length && ts[i] == t) continue;
+      ts.splice(i, 0, t);
+      v.splice(i, 0, this.interpolate(t));
     }
 
-    // aggregate the existing data points.
-    const points = range(left, right).map(i => {
-      return new Point(this.timestamps[i], this.values[i]);
-    }).filter(p => p.value !== undefined);
-    // edge case: all data in this range was missing?
-    if (points.length == 0) return undefined;
-    // edge case: only one real value?
-    if (points.length == 1) return points[0].value;
+    // next, interpolate any horizontal border crossing.
+    let cell: MaybeNumber = undefined;
+    for (let i = 0; i < ts.length; i++) {
+      if (v[i] === undefined) {
+        cell = undefined;
+        continue;
+      }
+      const iCell = Math.floor(((v[i] ?? 0) - bottom) / cellHeight);
+      if (iCell == cell) continue;
+      if (cell === undefined) {
+        cell = iCell;
+        continue;
+      }
 
-    // add left & right edges
-    const leftEdge = this.interpolate(tsLeft);
-    const rightEdge = this.interpolate(tsRight);
-    // timestamps.unshift(tsLeft);
-    // timestamps.push(tsRight);
-    // values.unshift(this.interpolate(tsLeft));
-    // values.push(this.interpolate(tsRight));
-    return op(points);
+      // we crossed at least one cell.
+      const direction = cell < iCell ? 1 : -1;
+      cell += direction;
+      const iv = (cell + (direction == 1 ? 0 : 1)) * cellHeight + bottom;
+      if (iv == v[i]) continue;
+
+      const it = linearInterpolate(v[i - 1] ?? 0, v[i] ?? 0, ts[i - 1], ts[i], iv);
+      ts.splice(i, 0, it);
+      v.splice(i, 0, iv);
+    }
+
+    // at this point, ts and v contain line segments that are each constrained to one cell.
+    const widthPercent: number[] = new Array(width * height);
+    const fillPercent: number[] = new Array(width * height);
+    widthPercent.fill(0);
+    fillPercent.fill(0);
+
+    for (let i = 1; i < ts.length; i++) {
+      const v1 = v[i - 1], v2 = v[i];
+      if (v1 === undefined || v2 === undefined) continue;
+      const x = Math.floor((ts[i - 1] - left) / cellWidth);
+      const y = Math.floor((Math.min(v1, v2) - bottom) / cellHeight);
+      const yReal = height - y - 1;
+
+      const old = widthPercent[yReal * width + x];
+      widthPercent[yReal * width + x] += (ts[i] - ts[i - 1]) / cellWidth;
+    }
+
+    return { widthPercent, fillPercent };
   }
+
+  // /*
+  //  * aggregate all the values within a timestamp range.
+  //  *   - if there are no values, interpolate instead.
+  //  *   - if there are values, but they're all missing, return undefined.
+  //  * otherwise, return the aggregate of all the values covered by the range.
+  //  * the default function is "area", but any operation may be used.
+  //  */
+  // aggregate(
+  //   tsLeft: number,
+  //   tsRight: number,
+  //   op: (points: Point[]) => MaybeNumber = area
+  // ): MaybeNumber {
+  //   // find data that's inside the range (left inclusive, right exclusive)
+  //   let left = binarySearch(this.timestamps, t => t >= tsLeft);
+  //   let right = binarySearch(this.timestamps, t => t > tsRight);
+  //   console.log(tsLeft, tsRight, left, right)
+
+  //   if (right == left) {
+  //     // no data points in here: interpolate, if possible.
+  //     return this.interpolate((tsLeft + tsRight) / 2);
+  //   }
+
+  //   // aggregate the existing data points.
+  //   const points = range(left, right).map(i => {
+  //     return new Point(this.timestamps[i], this.values[i]);
+  //   }).filter(p => p.value !== undefined);
+  //   // edge case: all data in this range was missing?
+  //   if (points.length == 0) return undefined;
+  //   // edge case: only one real value?
+  //   if (points.length == 1) return points[0].value;
+
+  //   // add left & right edges
+  //   const leftEdge = this.interpolate(tsLeft);
+  //   const rightEdge = this.interpolate(tsRight);
+  //   // timestamps.unshift(tsLeft);
+  //   // timestamps.push(tsRight);
+  //   // values.unshift(this.interpolate(tsLeft));
+  //   // values.push(this.interpolate(tsRight));
+  //   return op(points);
+  // }
 
   /*
    * interpolate the value at a specific timestamp.
@@ -182,12 +275,10 @@ export class Timeseries {
     if (left < 0 || right >= this.timestamps.length) return undefined;
 
     // edge cases: not skipping unknown values, and one side is a gap?
-    if (this.values[left] === undefined || this.values[right] === undefined) return undefined;
+    const vl = this.values[left], vr = this.values[right];
+    if (vl === undefined || vr === undefined) return undefined;
 
-    // linear interpolate between the two known values
-    const interval = this.timestamps[right] - this.timestamps[left];
-    const delta = (this.values[right] || 0) - (this.values[left] || 0);
-    return (this.values[left] || 0) + delta * (ts - this.timestamps[left]) / interval;
+    return linearInterpolate(this.timestamps[left], this.timestamps[right], vl, vr, ts);
   }
 
 
@@ -220,7 +311,11 @@ export class Timeseries {
 }
 
 
-export function area(points: Point[]): MaybeNumber {
-  console.log("area", points);
-  return 0;
+// given two points (x1, y1) and (x2, y2), find newY for the line crossing at newX.
+// you can reverse the sense of X and Y to calculate a new X for a given Y.
+function linearInterpolate(x1: number, x2: number, y1: number, y2: number, newX: number): number {
+  const interval = x2 - x1;
+  const delta = y2 - y1;
+  const frac = (newX - x1) / interval;
+  return y1 + frac * delta;
 }
