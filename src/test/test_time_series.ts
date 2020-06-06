@@ -96,9 +96,30 @@ describe("TimeSeries", () => {
 
     it("basic", () => {
       // 100, 125, 150, 175, 200 --> 0, 60, 120, 180, 240, 300
-      ts1.antialias(4, 5).should.eql([ [ 5 ] ]);
+      ts1.antialias(4, 5).should.eql({
+        widthPercent: [ 0, 0, 0, 0.96, 0, 0, 0.92, 0.04, 0, 0.88, 0.08, 0, 0.84, 0.12, 0, 0, 0.16, 0, 0, 0 ],
+        fillPercent: [ 0, 0, 0, 0.48, 0, 0, 0.441, 0.999, 0, 0.403, 0.997, 1, 0.368, 0.993, 1, 1, 0.987, 1, 1, 1, ],
+      });
     });
 
-    // vertical line crosses multiple cells
+    it("vertical line crosses multiple cells", () => {
+      const ts2 = TimeSeries.fromArrays("vert", [ 0, 100, 200, 300, 400 ], [ 0, 400, 200, 300, 200 ]);
+      ts2.antialias(2, 2).should.eql({
+        widthPercent: [ 0.75, 1, 0.25, 0 ],
+        fillPercent: [ 0.375, 0.25, 0.875, 1, ],
+      });
+    });
+
+    it("mostly empty", () => {
+      const ts3 = TimeSeries.fromArrays("small", [ 100, 200 ], [ 150, 150 ]);
+      ts3.antialias(3, 3, 300, 0, 0, 300).should.eql({
+        widthPercent: [ 0, 0, 0, 0, 1, 0, 0, 0, 0, ],
+        fillPercent: [ 0, 0, 0, 0, 0.5, 0, 0, 1, 0, ],
+      });
+      ts3.antialias(3, 3, 300, 0, 50, 350).should.eql({
+        widthPercent: [ 0, 0, 0, 0.5, 0.5, 0, 0, 0, 0, ],
+        fillPercent: [ 0, 0, 0, 0.25, 0.25, 0, 0.5, 0.5, 0, ],
+      });
+    });
   })
 });
