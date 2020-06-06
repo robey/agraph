@@ -194,57 +194,22 @@ export class TimeSeries {
     for (let i = 1; i < ts.length; i++) {
       const v1 = v[i - 1], v2 = v[i];
       if (v1 === undefined || v2 === undefined) continue;
-      const x = Math.floor((ts[i - 1] - left) / cellWidth);
-      const y = Math.floor((Math.min(v1, v2) - bottom) / cellHeight);
+      const x = floor((ts[i - 1] - left) / cellWidth);
+      const y = floor((Math.min(v1, v2) - bottom) / cellHeight);
       const yReal = height - y - 1;
 
-      const old = widthPercent[yReal * width + x];
-      widthPercent[yReal * width + x] += (ts[i] - ts[i - 1]) / cellWidth;
+      const segmentPercent = (ts[i] - ts[i - 1]) / cellWidth;
+      const areaPercent = ((v1 - (y * cellHeight)) + (v2 - (y * cellHeight))) / 2 / cellHeight * segmentPercent;
+      widthPercent[yReal * width + x] += segmentPercent;
+      fillPercent[yReal * width + x] += areaPercent;
+      for (const yy of range(yReal + 1, height)) fillPercent[yy * width + x] += segmentPercent;
     }
 
-    return { widthPercent, fillPercent };
+    return {
+      widthPercent: widthPercent.map(n => Math.round(n * 1000) / 1000),
+      fillPercent: fillPercent.map(n => Math.round(n * 1000) / 1000),
+    };
   }
-
-  // /*
-  //  * aggregate all the values within a timestamp range.
-  //  *   - if there are no values, interpolate instead.
-  //  *   - if there are values, but they're all missing, return undefined.
-  //  * otherwise, return the aggregate of all the values covered by the range.
-  //  * the default function is "area", but any operation may be used.
-  //  */
-  // aggregate(
-  //   tsLeft: number,
-  //   tsRight: number,
-  //   op: (points: Point[]) => MaybeNumber = area
-  // ): MaybeNumber {
-  //   // find data that's inside the range (left inclusive, right exclusive)
-  //   let left = binarySearch(this.timestamps, t => t >= tsLeft);
-  //   let right = binarySearch(this.timestamps, t => t > tsRight);
-  //   console.log(tsLeft, tsRight, left, right)
-
-  //   if (right == left) {
-  //     // no data points in here: interpolate, if possible.
-  //     return this.interpolate((tsLeft + tsRight) / 2);
-  //   }
-
-  //   // aggregate the existing data points.
-  //   const points = range(left, right).map(i => {
-  //     return new Point(this.timestamps[i], this.values[i]);
-  //   }).filter(p => p.value !== undefined);
-  //   // edge case: all data in this range was missing?
-  //   if (points.length == 0) return undefined;
-  //   // edge case: only one real value?
-  //   if (points.length == 1) return points[0].value;
-
-  //   // add left & right edges
-  //   const leftEdge = this.interpolate(tsLeft);
-  //   const rightEdge = this.interpolate(tsRight);
-  //   // timestamps.unshift(tsLeft);
-  //   // timestamps.push(tsRight);
-  //   // values.unshift(this.interpolate(tsLeft));
-  //   // values.push(this.interpolate(tsRight));
-  //   return op(points);
-  // }
 
   /*
    * interpolate the value at a specific timestamp.
@@ -284,25 +249,6 @@ export class TimeSeries {
 
 
 
-
-
-
-
-  // # adjust our current timestamps into N new equally-spaced timestamps covering the same range. the new datasets will
-  // # be anchored on each end, but interpolated in the middle. if the datasets are being compressed by a factor of more
-  // # than 2, sets of points will be merged by average-area.
-  // # returns a new DataTable.
-  // toDataPoints: (n) ->
-  //   new_interval = @totalInterval / (n - 1)
-  //   new_timestamps = [0 ... n].map (i) => @timestamps[0] + new_interval * i
-  //   if n * 2 <= @timestamps.length then return @toAveragedDataPoints(n, new_interval, new_timestamps)
-  //   new_datasets = {}
-  //   for name of @datasets
-  //     new_datasets[name] = [ @datasets[name][0] ]
-  //     for i in [1 ... n]
-  //       new_datasets[name].push @interpolate(new_timestamps[i], @datasets[name])
-  //   new DataTable(new_timestamps, new_datasets)
-
 //   # graphite: [ { target, datapoints: [ [ y, timestamp ], ... ] } ]
 //   loadFromGraphite: (data) ->
 //     for item in data then @addPoints(item.target, item.datapoints.map ([y, ts]) -> [ts, y])
@@ -318,4 +264,12 @@ function linearInterpolate(x1: number, x2: number, y1: number, y2: number, newX:
   const delta = y2 - y1;
   const frac = (newX - x1) / interval;
   return y1 + frac * delta;
+}
+
+function fudge(n: number): number {
+  return Math.round(n * Math.pow(2, 32)) / Math.pow(2, 32);
+}
+
+function floor(n: number): number {
+  return Math.floor(fudge(n));
 }

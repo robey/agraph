@@ -96,28 +96,9 @@ describe("TimeSeries", () => {
 
     it("basic", () => {
       // 100, 125, 150, 175, 200 --> 0, 60, 120, 180, 240, 300
-      makeHtml("test.html", ts1, 200, 200);
       ts1.antialias(4, 5).should.eql([ [ 5 ] ]);
     });
 
     // vertical line crosses multiple cells
   })
 });
-
-
-import * as fs from "fs";
-
-function makeHtml(name: string, ts: TimeSeries, width: number, height: number) {
-  const cells = ts.antialias(width, height);
-  let out = "";
-  out += "<html><body><table>\n";
-  for (let y = 0; y < height; y++) {
-    out += "<tr>\n";
-    for (let x = 0; x < width; x++) {
-      out += `<td style=\"width: 5px; height: 5px; background: #ff0000; opacity: ${cells.widthPercent[y * width + x]}\"></td>\n`;
-    }
-    out += "</tr>\n";
-  }
-  out += "</table></body></html>\n";
-  fs.writeFileSync(name, out);
-}
