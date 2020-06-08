@@ -1,4 +1,4 @@
-import { buildSvg, Line, Rect, LineOptions } from "../svg";
+import { buildSvg, ClipPath, Line, LineOptions, Rect, Text, TextOptions } from "../svg";
 
 import "should";
 import "source-map-support/register";
@@ -57,5 +57,24 @@ describe("SVG", () => {
         `  <path d="M 10 20 L 20 20 Z" stroke="red" stroke-width="4" stroke-linecap="cat" stroke-linejoin="dog" fill="blue"/>\n` +
         SVG_FOOTER);
     });
+  });
+
+  it("text", () => {
+    const options: TextOptions = { fontFamily: "serif", fontSize: 12, fill: "green", textAnchor: "no", clipPath: "q" };
+    const text = new Text({ x: 1, y: 4 }, "hello sailor", options);
+    buildSvg([ text ], {}).should.eql(
+      SVG_HEADER +
+      `  <text x="1" y="4" font-family="serif" font-size="12" fill="green" text-anchor="no" clip-path="url(#q)">` +
+      `hello sailor` +
+      `</text>\n` +
+      SVG_FOOTER
+    );
+  });
+
+  it("clip path", () => {
+    const path = new ClipPath("foo", new Rect({ x: 1, y: 2, width: 3, height: 4 }));
+    buildSvg([ path ]).should.eql(
+      SVG_HEADER + `  <clipPath id="foo"><rect x="1" y="2" width="3" height="4" /></clipPath>\n` + SVG_FOOTER
+    );
   });
 });

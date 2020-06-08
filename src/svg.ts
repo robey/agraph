@@ -103,6 +103,42 @@ export class Line implements ToXml {
 }
 
 
+export interface TextOptions {
+  fontFamily?: string;
+  fontSize?: number;
+  fill?: string;
+  textAnchor?: string;
+  clipPath?: string;
+}
+
+export class Text implements ToXml {
+  constructor(public location: Point, public text: string, public options: TextOptions = {}) {
+    // pass
+  }
+
+  toXml(indent: number): string[] {
+    const fields: string[] = [];
+    if (this.options.fontFamily) fields.push(`font-family="${this.options.fontFamily}"`);
+    if (this.options.fontSize) fields.push(`font-size="${this.options.fontSize}"`);
+    if (this.options.fill) fields.push(`fill="${this.options.fill}"`);
+    if (this.options.textAnchor) fields.push(`text-anchor="${this.options.textAnchor}"`);
+    if (this.options.clipPath) fields.push(`clip-path="url(#${this.options.clipPath})"`);
+    return [ `<text x="${this.location.x}" y="${this.location.y}" ${fields.join(" ")}>${this.text}</text>` ];
+  }
+}
+
+
+export class ClipPath implements ToXml {
+  constructor(public name: string, public rect: Rect) {
+    // pass
+  }
+
+  toXml(indent: number): string[] {
+    return [ `<clipPath id="${this.name}">${this.rect.toXml(0).join("")}</clipPath>` ];
+  }
+}
+
+
 // collection of other xml items
 class Compound implements ToXml {
   constructor(public elements: ToXml[]) {
