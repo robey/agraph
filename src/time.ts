@@ -5,26 +5,133 @@ export const MINUTE = 60;
 export const HOUR = 60 * MINUTE;
 export const DAY = 24 * HOUR;
 export const WEEK = 7 * DAY;
+// these are looser concepts:
+export const MONTH = 30 * DAY;
+export const QUARTER = 90 * DAY;
+export const YEAR = 365 * DAY;
 
-const IN_DAY_UNITS = [ 1, 5, 15, 60, 5 * MINUTE, 15 * MINUTE, HOUR, ];
+interface IntervalMath {
+  interval: number;
+  start: (d: luxon.DateTime) => luxon.DateTime;
+  next: (d: luxon.DateTime) => luxon.DateTime;
+}
 
-const ALIGN_UNITS = [ 4 * HOUR, 12 * HOUR, DAY, ];
-const ALIGN_NEXT: ((t: number) => number)[] = [
-  // 4 hour
-  asLuxon(d => d.hour < 20 ? d.set({ hour: d.hour + 4 }) : d.plus({ day: 1 }).startOf("day")),
-  asLuxon(d => d.hour == 0 ? d.set({ hour: d.hour + 12 }) : d.plus({ day: 1 }).startOf("day")),
-  asLuxon(d => d.plus({ day: 1 })),
+const INTERVALS: IntervalMath[] = [
+  {
+    interval: 1,
+    start: d => d,
+    next: d => d.plus({ second: 1 }),
+  },
+  {
+    interval: 5,
+    start: d => d.plus({ second: modCeil(d.toSeconds(), 5) }),
+    next: d => d.plus({ second: 5 }),
+  },
+  {
+    interval: 15,
+    start: d => d.plus({ second: modCeil(d.toSeconds(), 15) }),
+    next: d => d.plus({ second: 15 }),
+  },
+  {
+    interval: MINUTE,
+    start: d => d.plus({ second: modCeil(d.toSeconds(), MINUTE) }),
+    next: d => d.plus({ minute: 1 }),
+  },
+  {
+    interval: 5 * MINUTE,
+    start: d => d.plus({ second: modCeil(d.toSeconds(), 5 * MINUTE) }),
+    next: d => d.plus({ minute: 5 }),
+  },
+  {
+    interval: 15 * MINUTE,
+    start: d => d.plus({ second: modCeil(d.toSeconds(), 15 * MINUTE) }),
+    next: d => d.plus({ minute: 15 }),
+  },
+  {
+    interval: HOUR,
+    start: d => d.plus({ second: modCeil(d.toSeconds(), HOUR) }),
+    next: d => d.plus({ hour: 1 }),
+  },
+  {
+    interval: 4 * HOUR,
+    start: d => d.plus({ hour: modCeil(d.hour, 4) }),
+    next: d => d.hour < 20 ? d.set({ hour: d.hour + 4 }) : d.plus({ day: 1 }).startOf("day"),
+  },
+  {
+    interval: 12 * HOUR,
+    start: d => d.plus({ hour: modCeil(d.hour, 12) }),
+    next: d => d.hour == 0 ? d.set({ hour: 12 }) : d.plus({ day: 1 }).startOf("day"),
+  },
+  {
+    interval: DAY,
+    start: d => d.plus({ hour: modCeil(d.hour, 24) }),
+    next: d => d.plus({ day: 1 }),
+  },
+  {
+    interval: WEEK,
+    start: nextMonday,
+    next: d => nextMonday(d.plus({ seconds: 1 })),
+  },
+  {
+    interval: MONTH,
+    start: nextMonth,
+    next: d => d.plus({ month: 1 }),
+  },
+  {
+    interval: QUARTER,
+    start: nextQuarter,
+    next: d => d.plus({ month: 4 }),
+  },
+  {
+    interval: YEAR,
+    start: nextYear,
+    next: d => d.plus({ year: 1 }),
+  },
 ];
 
-// turn a DateTime transform into a seconds transform
-function asLuxon(transform: (d: luxon.DateTime) => luxon.DateTime): (t: number) => number {
-  return t => transform(luxon.DateTime.fromSeconds(t)).toSeconds();
+function modCeil(n: number, factor: number): number {
+  const r = n % factor;
+  return r == 0 ? 0 : factor - r;
+}
+
+function nextMonday(d: luxon.DateTime): luxon.DateTime {
+  let d1 = d.startOf("day");
+  if (d1.toSeconds() == d.toSeconds() && d.weekday == 1) return d;
+  do {
+    d1 = d1.plus({ days: 1 });
+  } while (d1.weekday != 1);
+  return d1;
+}
+
+function nextMonth(d: luxon.DateTime): luxon.DateTime {
+  let d1 = d.startOf("month").startOf("day");
+  if (d1.toSeconds() == d.toSeconds() && d.day == 1) return d;
+  return d1.plus({ month: 1 });
+}
+
+function nextQuarter(d: luxon.DateTime): luxon.DateTime {
+  let d1 = d.startOf("month").startOf("day");
+  if (d1.toSeconds() == d.toSeconds() && d.day == 1 && d.month % 4 == 1) return d;
+  do {
+    d1 = d1.plus({ month: 1 });
+  } while (d1.month % 4 != 1);
+  return d1;
+}
+
+function nextYear(d: luxon.DateTime): luxon.DateTime {
+  let d1 = d.startOf("year").startOf("day");
+  if (d1.toSeconds() == d.toSeconds()) return d;
+  return d1.plus({ year: 1 });
 }
 
 
 export class TimeBuddy {
   constructor(public timezone?: string) {
     // pass
+  }
+
+  toLuxon(t: number): luxon.DateTime {
+    return luxon.DateTime.fromSeconds(t, { zone: this.timezone });
   }
 
   /*
@@ -42,74 +149,18 @@ export class TimeBuddy {
    */
   timeGranularityFor(minTime: number, maxTime: number, count: number): number[] {
     const ideal = (maxTime - minTime) / (count + 1);
-    if (ideal <= 7 * DAY) {
-      // can just align by rounding
-      for (const interval of IN_DAY_UNITS) {
-        const start = this.ceilTimeTo(minTime, interval);
-        if (start + (count - 1) * interval >= maxTime) {
-          return range(0, count).map(i => start + i * interval).filter(i => i <= maxTime);
-        }
-      }
 
-      for (const i of range(0, ALIGN_UNITS.length)) {
-        const interval = ALIGN_UNITS[i];
-        const start = this.ceilTimeTo(minTime, interval);
-        const list = generate(start, ALIGN_NEXT[i], (t, len) => t <= maxTime && len <= count);
-        if (list.length <= count && list[list.length - 1] <= maxTime) return list;
-      }
-    }
-
-    if (ideal < 7 * DAY) {
-
-    }
-
-    if (ideal <= 28 * DAY) {
-      // try weekly from monday
-      const start = this.ceilToMonday(minTime);
-      const list = generate(start, t => this.ceilToMonday(t + 1), (t, len) => t <= maxTime && len <= count);
+    for (const math of INTERVALS) {
+      if (ideal > math.interval) continue;
+      const start = math.start(this.toLuxon(minTime));
+      const list = generate(
+        start.toSeconds(),
+        t => math.next(this.toLuxon(t)).toSeconds(),
+        (t, len) => t <= maxTime && len <= count
+      );
       if (list.length <= count && list[list.length - 1] <= maxTime) return list;
     }
 
     return [ minTime, Infinity ];
   }
-
-  // bump up a time to the nearest "round-number" time matching an interval,
-  // in this time zone. it supports any interval up to 24 hours. (there's no
-  // way to make equal intervals after that.)
-  ceilTimeTo(t: number, interval: number): number {
-    // can we just align by rounding?
-    if (interval <= 1 * HOUR) return Math.ceil(t / interval) * interval;
-
-    const d = luxon.DateTime.fromSeconds(t, { zone: this.timezone });
-
-    // intervals > 1h, <= 1d should be offset from local midnight
-    if (interval <= 24 * HOUR) {
-      const midnight = d.startOf("day");
-      return midnight.toSeconds() + Math.ceil((t - midnight.toSeconds()) / interval) * interval;
-    }
-
-    // // intervals > 1d, < 7d should be offset from the first of the month
-    // if (interval < 7 * DAY) {
-    //   const d = new Date(t * 1000);
-    //   d.setDate(1);
-    //   d.setHours(0, 0, 0, 0);
-    //   let first = d.getTime() / 1000;
-    //   return first + Math.ceil((t - first) / interval) * interval;
-    // }
-
-    throw new Error("intervals of more than a day are not supported");
-  }
-
-  // when's the next monday?
-  ceilToMonday(t: number): number {
-    let d = luxon.DateTime.fromSeconds(t, { zone: this.timezone }).startOf("day");
-    if (d.toSeconds() == t && d.weekday == 1) return t;
-    do {
-      d = d.plus({ days: 1 });
-    } while (d.weekday != 1);
-    return d.toSeconds();
-  }
-
-
-
 }

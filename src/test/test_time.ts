@@ -1,6 +1,6 @@
 import * as luxon from "luxon";
 import { range } from "../arrays";
-import { DAY, HOUR, MINUTE, TimeBuddy, WEEK } from "../time";
+import { DAY, HOUR, MINUTE, MONTH, TimeBuddy, WEEK, YEAR } from "../time";
 
 import "should";
 import "source-map-support/register";
@@ -11,6 +11,8 @@ describe("TimeBuddy", () => {
 
   // mon 2020-06-08, midnight PDT
   const midnight = 1591599600;
+  // wed 2020-06-10, 9:14:56 PDT
+  const bikeDay = 1591805696;
 
   describe("timeGranularityFor", () => {
     it("seconds", () => {
@@ -42,7 +44,70 @@ describe("TimeBuddy", () => {
       );
     });
 
-    it("hours/day across daylight savings", () => {
+    it("weeks", () => {
+      t.timeGranularityFor(midnight - HOUR, midnight + 30 * DAY, 5).should.eql(
+        range(midnight, midnight + 30 * DAY, WEEK)
+      );
+      t.timeGranularityFor(midnight - 3 * DAY - HOUR, midnight + 30 * DAY, 5).should.eql(
+        range(midnight, midnight + 30 * DAY, WEEK)
+      );
+      t.timeGranularityFor(midnight - 11 * DAY - HOUR, midnight + 20 * DAY, 5).map(t => {
+        return luxon.DateTime.fromSeconds(t).toString();
+      }).should.eql([
+        "2020-06-01T00:00:00.000-07:00",
+        "2020-06-08T00:00:00.000-07:00",
+        "2020-06-15T00:00:00.000-07:00",
+        "2020-06-22T00:00:00.000-07:00",
+      ]);
+    });
+
+    it("months", () => {
+      t.timeGranularityFor(bikeDay, bikeDay + 3 * MONTH, 5).map(t => {
+        return luxon.DateTime.fromSeconds(t).toString();
+      }).should.eql([
+        "2020-07-01T00:00:00.000-07:00",
+        "2020-08-01T00:00:00.000-07:00",
+        "2020-09-01T00:00:00.000-07:00",
+      ]);
+      t.timeGranularityFor(bikeDay - 2 * WEEK, bikeDay + 3 * MONTH, 5).map(t => {
+        return luxon.DateTime.fromSeconds(t).toString();
+      }).should.eql([
+        "2020-06-01T00:00:00.000-07:00",
+        "2020-07-01T00:00:00.000-07:00",
+        "2020-08-01T00:00:00.000-07:00",
+        "2020-09-01T00:00:00.000-07:00",
+      ]);
+      t.timeGranularityFor(bikeDay - 6 * MONTH, bikeDay - 3 * MONTH, 5).map(t => {
+        return luxon.DateTime.fromSeconds(t).toString();
+      }).should.eql([
+        "2020-01-01T00:00:00.000-08:00",
+        "2020-02-01T00:00:00.000-08:00",
+        "2020-03-01T00:00:00.000-08:00",
+      ]);
+    });
+
+    it("quarters", () => {
+      t.timeGranularityFor(bikeDay, bikeDay + 13 * MONTH, 5).map(t => {
+        return luxon.DateTime.fromSeconds(t).toString();
+      }).should.eql([
+        "2020-09-01T00:00:00.000-07:00",
+        "2021-01-01T00:00:00.000-08:00",
+        "2021-05-01T00:00:00.000-07:00",
+      ]);
+    });
+
+    it("years", () => {
+      t.timeGranularityFor(bikeDay - 3 * YEAR, bikeDay + YEAR, 5).map(t => {
+        return luxon.DateTime.fromSeconds(t).toString();
+      }).should.eql([
+        "2018-01-01T00:00:00.000-08:00",
+        "2019-01-01T00:00:00.000-08:00",
+        "2020-01-01T00:00:00.000-08:00",
+        "2021-01-01T00:00:00.000-08:00",
+      ]);
+    });
+
+    it("across daylight savings", () => {
       // 8-mar-2020 was a daylight savings change in PST/PDT.
       const midnight2 = 1583654400;
       luxon.DateTime.fromSeconds(midnight2).toString().should.eql("2020-03-08T00:00:00.000-08:00");
@@ -79,52 +144,24 @@ describe("TimeBuddy", () => {
         "2020-03-09T00:00:00.000-07:00",
         "2020-03-10T00:00:00.000-07:00",
       ]);
-    });
 
-    it("weeks", () => {
-      t.timeGranularityFor(midnight - HOUR, midnight + 30 * DAY, 5).should.eql(
-        range(midnight, midnight + 30 * DAY, WEEK)
-      );
+      t.timeGranularityFor(midnight2 - 11 * DAY - HOUR, midnight2 + 20 * DAY, 5).map(t => {
+        return luxon.DateTime.fromSeconds(t).toString();
+      }).should.eql([
+        "2020-03-02T00:00:00.000-08:00",
+        "2020-03-09T00:00:00.000-07:00",
+        "2020-03-16T00:00:00.000-07:00",
+        "2020-03-23T00:00:00.000-07:00",
+      ]);
 
-    });
-  });
-
-  describe("ceilTimeTo", () => {
-    // mon 2020-06-08, 15:34:17 UTC-0700
-    const now = 1591655657;
-    // thu 2020-06-11, 15:34:17 UTC-0700
-    const thursday = 1591914857;
-
-    it("up to an hour", () => {
-      t.ceilTimeTo(now, 1).should.eql(1591655657);
-      t.ceilTimeTo(now, 2).should.eql(1591655658);
-      t.ceilTimeTo(now, 5).should.eql(1591655660);
-      t.ceilTimeTo(now, 60).should.eql(1591655700);
-      t.ceilTimeTo(now, 300).should.eql(1591655700);
-      // 16:00
-      t.ceilTimeTo(now, 1800).should.eql(1591657200);
-      t.ceilTimeTo(now, 3600).should.eql(1591657200);
-    });
-
-    it("up to a day, from midnight", () => {
-      // 16:00
-      t.ceilTimeTo(now, 2 * HOUR).should.eql(1591657200);
-      t.ceilTimeTo(now, 4 * HOUR).should.eql(1591657200);
-      // 18:00
-      t.ceilTimeTo(now, 3 * HOUR).should.eql(1591664400);
-      t.ceilTimeTo(now, 6 * HOUR).should.eql(1591664400);
-      // midnight tomorrow
-      t.ceilTimeTo(now, 12 * HOUR).should.eql(1591686000);
-      t.ceilTimeTo(now, 24 * HOUR).should.eql(1591686000);
-    });
-
-    it("ceilToMonday", () => {
-      // 15-jun
-      t.ceilToMonday(now).should.eql(1592204400);
-      t.ceilToMonday(thursday).should.eql(1592204400);
-      t.ceilToMonday(thursday + 3 * DAY).should.eql(1592204400);
-      // 22-jun
-      t.ceilToMonday(thursday + 4 * DAY).should.eql(1592809200);
+      t.timeGranularityFor(midnight2 - 2 * MONTH, midnight2 + 2 * MONTH, 5).map(t => {
+        return luxon.DateTime.fromSeconds(t).toString();
+      }).should.eql([
+        "2020-02-01T00:00:00.000-08:00",
+        "2020-03-01T00:00:00.000-08:00",
+        "2020-04-01T00:00:00.000-07:00",
+        "2020-05-01T00:00:00.000-07:00",
+      ]);
     });
   });
 });
