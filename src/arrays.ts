@@ -21,3 +21,17 @@ export function binarySearch<A>(array: A[], test: (item: A) => boolean): number 
 export function average(array: number[]): number {
   return array.reduce((sum, n) => sum + n) / array.length;
 }
+
+export function generate(
+  start: number,
+  next: (n: number) => number,
+  condition: (n: number, len: number) => boolean
+): number[] {
+  const rv: number[] = [];
+  let current = start;
+  do {
+    rv.push(current);
+    current = next(current);
+  } while (condition(current, rv.length));
+  return rv;
+}

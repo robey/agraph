@@ -20,8 +20,12 @@
     "distclean": "npm run clean && rm -rf node_modules",
     "test": "npm run build && mocha -R spec --colors --recursive lib/test"
   },
-  "dependencies": {},
+  "dependencies": {
+    "display-si": "^1.0.3",
+    "luxon": "^1.24.1"
+  },
   "devDependencies": {
+    "@types/luxon": "^1.24.0",
     "@types/mocha": "^7.0.2",
     "@types/node": "^14.0.11",
     "mocha": "^7.2.0",
