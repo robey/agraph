@@ -105,6 +105,53 @@ describe("TimeBuddy", () => {
         "2020-01-01T00:00:00.000-08:00",
         "2021-01-01T00:00:00.000-08:00",
       ]);
+
+      // 2
+      t.timeGranularityFor(bikeDay - 6 * YEAR, bikeDay + YEAR, 5).map(t => {
+        return luxon.DateTime.fromSeconds(t).toString();
+      }).should.eql([
+        "2016-01-01T00:00:00.000-08:00",
+        "2018-01-01T00:00:00.000-08:00",
+        "2020-01-01T00:00:00.000-08:00",
+      ]);
+
+      // 5
+      t.timeGranularityFor(bikeDay - 20 * YEAR, bikeDay + 3 * YEAR, 5).map(t => {
+        return luxon.DateTime.fromSeconds(t).toString();
+      }).should.eql([
+        "2005-01-01T00:00:00.000-08:00",
+        "2010-01-01T00:00:00.000-08:00",
+        "2015-01-01T00:00:00.000-08:00",
+        "2020-01-01T00:00:00.000-08:00",
+      ]);
+
+      // 10
+      t.timeGranularityFor(bikeDay - 30 * YEAR, bikeDay + 3 * YEAR, 5).map(t => {
+        return luxon.DateTime.fromSeconds(t).toString();
+      }).should.eql([
+        "2000-01-01T00:00:00.000-08:00",
+        "2010-01-01T00:00:00.000-08:00",
+        "2020-01-01T00:00:00.000-08:00",
+      ]);
+
+      // 20
+      t.timeGranularityFor(bikeDay - 50 * YEAR, bikeDay + 10 * YEAR, 5).map(t => {
+        return luxon.DateTime.fromSeconds(t).toString();
+      }).should.eql([
+        "1980-01-01T00:00:00.000-08:00",
+        "2000-01-01T00:00:00.000-08:00",
+        "2020-01-01T00:00:00.000-08:00",
+      ]);
+
+      // 50
+      t.timeGranularityFor(bikeDay - 90 * YEAR, bikeDay + 20 * YEAR, 4).map(t => {
+        return luxon.DateTime.fromSeconds(t).toString();
+      }).should.eql([
+        "1950-01-01T00:00:00.000-08:00",
+        "2000-01-01T00:00:00.000-08:00",
+      ]);
+
+      // ok, that's enough.
     });
 
     it("across daylight savings", () => {

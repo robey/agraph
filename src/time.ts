@@ -1,5 +1,6 @@
+import { ceilToCurrency } from "display-si";
 import * as luxon from "luxon";
-import { range, generate } from "./arrays";
+import { generate } from "./arrays";
 
 export const MINUTE = 60;
 export const HOUR = 60 * MINUTE;
@@ -118,10 +119,13 @@ function nextQuarter(d: luxon.DateTime): luxon.DateTime {
   return d1;
 }
 
-function nextYear(d: luxon.DateTime): luxon.DateTime {
+function nextYear(d: luxon.DateTime, multiple: number = 1): luxon.DateTime {
   let d1 = d.startOf("year").startOf("day");
-  if (d1.toSeconds() == d.toSeconds()) return d;
-  return d1.plus({ year: 1 });
+  if (d1.toSeconds() == d.toSeconds() && d.year % multiple == 0) return d;
+  do {
+    d1 = d1.plus({ year: 1 });
+  } while (d1.year % multiple != 0);
+  return d1;
 }
 
 
@@ -149,18 +153,23 @@ export class TimeBuddy {
    */
   timeGranularityFor(minTime: number, maxTime: number, count: number): number[] {
     const ideal = (maxTime - minTime) / (count + 1);
+    // let the list go one element over -- if that happens, it means the maxTime range didn't really fit.
+    const condition = (t: number, len: number) => t <= maxTime && len <= count + 1;
 
     for (const math of INTERVALS) {
       if (ideal > math.interval) continue;
       const start = math.start(this.toLuxon(minTime));
-      const list = generate(
-        start.toSeconds(),
-        t => math.next(this.toLuxon(t)).toSeconds(),
-        (t, len) => t <= maxTime && len <= count
-      );
-      if (list.length <= count && list[list.length - 1] <= maxTime) return list;
+      const list = generate(start.toSeconds(), t => math.next(this.toLuxon(t)).toSeconds(), condition);
+      if (list.length <= count) return list;
     }
 
-    return [ minTime, Infinity ];
+    // some currency-multiple of years
+    let multiple = 1;
+    while (true) {
+      const start = nextYear(this.toLuxon(minTime), multiple);
+      const list = generate(start.toSeconds(), t => this.toLuxon(t).plus({ year: multiple }).toSeconds(), condition);
+      if (list.length <= count) return list;
+      multiple = ceilToCurrency(multiple * 2);
+    }
   }
 }
