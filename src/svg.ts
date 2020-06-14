@@ -106,6 +106,7 @@ export class Line implements ToXml {
 export interface TextOptions {
   fontFamily?: string;
   fontSize?: number;
+  fontWeight?: string;
   fill?: string;
   textAnchor?: string;
   clipPath?: string;
@@ -120,6 +121,7 @@ export class Text implements ToXml {
     const fields: string[] = [];
     if (this.options.fontFamily) fields.push(`font-family="${this.options.fontFamily}"`);
     if (this.options.fontSize) fields.push(`font-size="${this.options.fontSize}"`);
+    if (this.options.fontWeight) fields.push(`font-weight="${this.options.fontWeight}"`);
     if (this.options.fill) fields.push(`fill="${this.options.fill}"`);
     if (this.options.textAnchor) fields.push(`text-anchor="${this.options.textAnchor}"`);
     if (this.options.clipPath) fields.push(`clip-path="url(#${this.options.clipPath})"`);
@@ -161,15 +163,18 @@ export function buildSvg(items: ToXml[], options: SvgOptions = {}): string {
   const content = new Compound(items);
 
   if (options.backgroundColor) {
-    const rect = new Rect({ x: 0, y: 0, width: pixelWidth, height: pixelHeight }, { fill: options.backgroundColor });
-    content.elements.push(rect);
+    const rect = new Rect(
+      { x: 0, y: 0, width: pixelWidth, height: pixelHeight },
+      { stroke: options.backgroundColor, fill: options.backgroundColor }
+    );
+    content.elements.unshift(rect);
   }
 
   return `<?xml version="1.0" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg width="${viewWidth}" height="${viewHeight}mm" viewBox="0 0 ${pixelWidth} ${pixelHeight}" xmlns="http://www.w3.org/2000/svg" version="1.1">
+<svg width="${viewWidth}mm" height="${viewHeight}mm" viewBox="0 0 ${pixelWidth} ${pixelHeight}" xmlns="http://www.w3.org/2000/svg" version="1.1">
   <desc>${description}</desc>
-${content.toXml(1)}
+${content.toXml(1).join("\n")}
 </svg>
 `;
 }

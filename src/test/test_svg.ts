@@ -24,6 +24,19 @@ describe("SVG", () => {
     );
   });
 
+  it("several rectangles", () => {
+    const rect1 = new Rect({ x: 1, y: 2, width: 3, height: 4 }, { fill: "#ff0000" });
+    const rect2 = new Rect({ x: 5, y: 2, width: 3, height: 4 }, { fill: "#ff0088" });
+    const rect3 = new Rect({ x: 9, y: 2, width: 3, height: 4 }, { fill: "#8800ff" });
+    buildSvg([ rect1, rect2, rect3 ], {}).should.eql(
+      SVG_HEADER +
+      `  <rect x="1" y="2" width="3" height="4" fill="#ff0000"/>\n` +
+      `  <rect x="5" y="2" width="3" height="4" fill="#ff0088"/>\n` +
+      `  <rect x="9" y="2" width="3" height="4" fill="#8800ff"/>\n` +
+      SVG_FOOTER
+    );
+  });
+
   describe("Line", () => {
     it("should plot a basic line", () => {
       const line = new Line([ { x: 10, y: 20 }, { x: 30, y: 40 } ], { strokeWidth: 2 });

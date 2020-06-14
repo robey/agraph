@@ -74,6 +74,14 @@ export class TimeSeries {
     this.values = sortedIndex.map(([ _ts, i ]) => this.values[i]);
   }
 
+  minInterval(): number | undefined {
+    if (this.timestamps.length <= 1) return undefined;
+    const intervals = range(1, this.timestamps.length).map(i => this.timestamps[i] - this.timestamps[i - 1]);
+    // js default sorting will stringify first and give completely bonkers answers
+    intervals.sort((a, b) => a - b);
+    return intervals[0];
+  }
+
   /*
    * assuming the timestamps are at regular intervals, fill in any missing
    * data with an undefined value. if no interval is passed in, we'll figure
@@ -93,12 +101,8 @@ export class TimeSeries {
       this.values.push(undefined);
     }
 
-    if (interval === undefined) {
-      const intervals = range(1, this.timestamps.length).map(i => this.timestamps[i] - this.timestamps[i - 1]);
-      // js default sorting will stringify first and give completely bonkers answers
-      intervals.sort((a, b) => a - b);
-      interval = intervals[0];
-    }
+    // minInterval will always return a value because we've already ensured there are at least 2 points.
+    interval = interval ?? this.minInterval() ?? 60;
 
     for (let i = 1; i < this.timestamps.length; i++) {
       const thisInterval = this.timestamps[i] - this.timestamps[i - 1];
