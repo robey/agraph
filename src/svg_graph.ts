@@ -1,6 +1,9 @@
-import { floorToPrecision, ceilToPrecision, roundToCurrency } from "display-si";
+import * as luxon from "luxon";
+import { floorToPrecision, ceilToPrecision, toSI, ceilToCurrency } from "display-si";
 import { range } from "./arrays";
-import { Box, buildSvg, ClipPath, Rect, Text, ToXml } from "./svg";
+import { Box, buildSvg, ClipPath, Line, Rect, Text, ToXml } from "./svg";
+import { DAY, TimeBuddy, YEAR } from "./time";
+import { TimeSeries } from "./time_series";
 import { TimeSeriesList } from "./time_series_list";
 
 export interface SvgGraphOptions {
@@ -23,6 +26,18 @@ export interface SvgGraphOptions {
   // ratio of width to height (should be PHI or 16/9 or similar)
   aspectRatio?: number;
 
+  // set a time zone? default is "local"
+  timezone?: string;
+
+  // aim for this many vertical grid lines
+  yLines?: number;
+
+  // thickness of line to use for drawing the data
+  lineWidth?: number;
+
+  // should the graph be a solid shape filled down?
+  fill?: boolean;
+
   // font to use for axis labels and legend
   font?: string;
   fontSize?: number;
@@ -33,9 +48,13 @@ export interface SvgGraphOptions {
   titleFontWeight?: string;
   titleColor?: string;
 
+  // for drawing the lines on
+  graphBackgroundColor?: string;
   // primary and secondary colors for drawing grid lines
   gridColor?: string;
   gridColor2?: string;
+  // color for x/y labels
+  labelColor?: string;
   // color for legend text
   legendColor?: string;
   // color for lines
@@ -55,14 +74,19 @@ const DEFAULT_OPTIONS = {
   viewWidth: 120,
   pixelWidth: 800,
   aspectRatio: 16 / 9,
+  yLines: 5,
+  lineWidth: 3,
+  fill: false,
   font: "monospace",
   fontSize: 20,
   titleFont: "sans-serif",
   titleFontSize: 24,
   titleFontWeight: "bold",
-  titleColor: "#000000",
+  titleColor: "#660099",
+  graphBackgroundColor: "#eeeeff",
   gridColor: "#555555",
   gridColor2: "#bbbbbb",
+  labelColor: "#555555",
   legendColor: "#555555",
   colors: [ "red", "blue", "orange", "#3c3", "#c6c", "yellow" ],
   padding: 20,
@@ -71,20 +95,29 @@ const DEFAULT_OPTIONS = {
 };
 
 
+export function buildSvgGraph(lines: TimeSeriesList, options: SvgGraphOptions = {}): string {
+  return new SvgGraph(lines, options).draw();
+}
+
 export class SvgGraph {
   showLegend: boolean;
   pixelWidth: number;
   pixelHeight: number;
   viewWidth: number;
   viewHeight: number;
+  yLineCount: number;
+  lineWidth: number;
+  fill: boolean;
   font: string;
   fontSize: number;
   titleFont: string;
   titleFontSize: number;
   titleFontWeight: string;
   titleColor: string;
+  graphBackgroundColor: string;
   gridColor: string;
   gridColor2: string;
+  labelColor: string;
   legendColor: string;
   colors: string[];
   padding: number;
@@ -97,31 +130,35 @@ export class SvgGraph {
   right: number;
 
   constructor(public lines: TimeSeriesList, public options: SvgGraphOptions = {}) {
-    this.options = Object.assign({}, this.options, DEFAULT_OPTIONS);
-
     this.showLegend = this.options.showLegend ?? DEFAULT_OPTIONS.showLegend;
     const aspectRatio = this.options.aspectRatio ?? DEFAULT_OPTIONS.aspectRatio;
     this.pixelWidth = this.options.pixelWidth ?? DEFAULT_OPTIONS.pixelWidth;
     this.pixelHeight = Math.round(this.pixelWidth / aspectRatio);
     this.viewWidth = this.options.viewWidth ?? DEFAULT_OPTIONS.viewWidth;
     this.viewHeight = Math.round(this.viewWidth / aspectRatio);
+    this.yLineCount = this.options.yLines ?? DEFAULT_OPTIONS.yLines;
+    this.lineWidth = this.options.lineWidth ?? DEFAULT_OPTIONS.lineWidth;
+    this.fill = this.options.fill ?? DEFAULT_OPTIONS.fill;
     this.font = this.options.font ?? DEFAULT_OPTIONS.font;
     this.fontSize = this.options.fontSize ?? DEFAULT_OPTIONS.fontSize;
     this.titleFont = this.options.titleFont ?? DEFAULT_OPTIONS.titleFont;
     this.titleFontSize = this.options.titleFontSize ?? DEFAULT_OPTIONS.titleFontSize;
     this.titleFontWeight = this.options.titleFontWeight ?? DEFAULT_OPTIONS.titleFontWeight;
     this.titleColor = this.options.titleColor ?? DEFAULT_OPTIONS.titleColor;
+    this.graphBackgroundColor = this.options.graphBackgroundColor ?? DEFAULT_OPTIONS.graphBackgroundColor;
     this.gridColor = this.options.gridColor ?? DEFAULT_OPTIONS.gridColor;
     this.gridColor2 = this.options.gridColor2 ?? DEFAULT_OPTIONS.gridColor2;
+    this.labelColor = this.options.labelColor ?? DEFAULT_OPTIONS.labelColor;
     this.legendColor = this.options.legendColor ?? DEFAULT_OPTIONS.legendColor;
     this.colors = this.options.colors ?? DEFAULT_OPTIONS.colors;
     this.padding = this.options.padding ?? DEFAULT_OPTIONS.padding;
     this.innerPadding = this.options.innerPadding ?? DEFAULT_OPTIONS.innerPadding;
     this.legendPadding = this.options.legendPadding ?? DEFAULT_OPTIONS.legendPadding;
+    const scaleToZero = this.options.scaleToZero ?? DEFAULT_OPTIONS.scaleToZero;
 
     // find a good bounding box for the graph itself
-    this.top = ceilToPrecision(this.lines.maxY, 2);
-    this.bottom = this.options.scaleToZero ? 0 : floorToPrecision(this.lines.minY, 2);
+    this.top = ceilToPrecision(this.lines.maxY * 1.1, 2);
+    this.bottom = scaleToZero ? 0 : floorToPrecision(this.lines.minY, 2);
     this.left = this.lines.minX;
     this.right = this.lines.maxX;
   }
@@ -161,31 +198,37 @@ export class SvgGraph {
       x: graphBox.x, y: this.pixelHeight - this.padding - legendHeight, width: graphBox.width, height: legendHeight
     };
 
+    const yLines = this.computeYLines();
+    const xLines = this.computeXLines(graphBox);
+
     // ----- build the elements
 
-    const elements: ToXml[] = [];
+    let elements: ToXml[] = [];
+    elements.push(new Rect(graphBox, { stroke: this.gridColor, strokeWidth: 1, fill: this.graphBackgroundColor }));
 
     if (this.options.title !== undefined) {
       elements.push(this.drawTitle(titleBox, this.options.title));
     }
 
-    if (this.showLegend) {
-      this.lines.list.forEach((ts, i) => {
-        const color = this.colors[i % this.colors.length];
+    elements = elements.concat(
+      this.drawYLabels(yLines, yLabelBox),
+      this.drawYLines(yLines, graphBox),
+      this.drawXLabels(xLines, xLabelBox),
+      this.drawXLines(xLines, graphBox),
+    );
+
+    this.lines.list.forEach((ts, i) => {
+      const color = this.colors[i % this.colors.length];
+      elements.push(this.drawTimeSeries(ts, graphBox, color));
+      if (this.showLegend) {
         for (const elem of this.drawLegend(legendBox, i, ts.name, color, this.legendPadding)) {
           elements.push(elem);
         }
-      });
-    }
+      }
+    });
 
     // build the actual SVG
-    return buildSvg(([
-      // new Rect(titleBox, { fill: "#00ffff" }),
-      new Rect(yLabelBox, { fill: "#00ffff" }),
-      new Rect(graphBox, { fill: "#0000ff" }),
-      new Rect(xLabelBox, { fill: "#00ffff" }),
-      new Rect(legendBox, { fill: "#00ff00" }),
-    ] as ToXml[]).concat(elements), {
+    return buildSvg(elements, {
       viewWidth: this.viewWidth,
       viewHeight: this.viewHeight,
       pixelWidth: this.pixelWidth,
@@ -204,6 +247,93 @@ export class SvgGraph {
     });
   }
 
+  drawYLabels(lines: number[], box: Box): ToXml[] {
+    // this is a hack because "dominant-baseline" doesn't work.
+    const textOffset = Math.round(this.fontSize / 3);
+
+    return lines.map(y => {
+      const px = box.x + box.width;
+      const py = this.yToPixel(y, box) + textOffset;
+      const options = { fontFamily: this.font, fontSize: this.fontSize, fill: this.labelColor, textAnchor: "end" };
+      return new Text({ x: px, y: py }, toSI(y), options);
+    });
+  }
+
+  drawYLines(lines: number[], box: Box): ToXml[] {
+    return lines.map(y => {
+      const points = [
+        { x: box.x, y: this.yToPixel(y, box) },
+        { x: box.x + box.width, y: this.yToPixel(y, box) },
+      ];
+      return new Line(points, { stroke: this.gridColor, strokeWidth: 1, fill: "none" });
+    });
+  }
+
+  drawXLabels(lines: number[], box: Box): ToXml[] {
+    let scale = this.lines.interval >= YEAR ? 2 : (this.lines.interval >= DAY ? 1 : 0);
+    const options = { fontFamily: this.font, fontSize: this.fontSize, fill: this.labelColor, textAnchor: "middle" };
+    const margin = 2.5 * this.fontSize;
+
+    return lines.filter(t => {
+      const x = this.xToPixel(t, box);
+      return x >= box.x + margin && x <= box.x + box.width - margin;
+    }).map(x => {
+      const px = this.xToPixel(x, box);
+      const py = box.y + this.fontSize;
+      const time = luxon.DateTime.fromSeconds(x, { zone: this.options.timezone });
+
+      let label: string;
+      switch (scale) {
+        case 2:
+          label = time.year.toString();
+          break;
+        case 1:
+          label = `${time.month}/${zpad(time.day)}`;
+          break;
+        default:
+          label = `${time.hour}:${zpad(time.minute)}`;
+          break;
+      }
+
+      return new Text({ x: px, y: py }, label, options);
+    });
+  }
+
+  drawXLines(lines: number[], box: Box): ToXml[] {
+    return lines.map(x => {
+      const points = [
+        { x: this.xToPixel(x, box), y: box.y },
+        { x: this.xToPixel(x, box), y: box.y + box.height },
+      ];
+      return new Line(points, { stroke: this.gridColor, strokeWidth: 1, fill: "none" });
+    });
+  }
+
+  drawTimeSeries(ts: TimeSeries, box: Box, color: string): ToXml {
+    const points = ts.toPoints().map(point => {
+      return point.value == undefined ? undefined :
+        { x: this.xToPixel(point.timestamp, box), y: this.yToPixel(point.value, box) };
+    });
+    let fill = "none";
+    let closeLoop = false;
+    if (this.fill) {
+      points.unshift({ x: box.x, y: box.y + box.height });
+      points.push({ x: box.x + box.width, y: box.y + box.height });
+      fill = color;
+      closeLoop = true;
+    }
+    const options = {
+      stroke: color,
+      strokeWidth: this.lineWidth,
+      strokeLineCap: "round",
+      strokeLineJoin: "round",
+      fill,
+      fillOpacity: 0.5,
+      closeLoop,
+    };
+    return new Line(points, options);
+  }
+
   drawLegend(box: Box, index: number, name: string, color: string, spacing: number = 0): ToXml[] {
     // put the first half down the left column, then the second half down the right column.
     const leftColumn = Math.ceil(this.lines.list.length / 2);
@@ -213,58 +343,50 @@ export class SvgGraph {
     const colorBox = { x: x, y: y + this.fontSize - colorSize, width: colorSize, height: colorSize };
     const colorRect = new Rect(colorBox, { stroke: this.gridColor, strokeWidth: 1, fill: color });
 
+    // the "y" appears to be the baseline, not an actually-useful coordinate.
+    // so, assume the descender isn't more than 25% taller.
+    // the clip box is really to keep it constrained horizontally.
     const textX = x + colorBox.width + this.innerPadding;
     const textY = y + this.fontSize;
     const textWidth = (box.width / 2) - this.innerPadding - this.padding - colorBox.width;
-    const textHeight = this.fontSize;
+    const textHeight = this.fontSize * 1.25;
+    const clip = new ClipPath(`clip${index}`, new Rect({ x: textX, y: y, width: textWidth, height: textHeight }))
     const text = new Text({ x: textX, y: textY }, name, {
       fontFamily: this.font, fontSize: this.fontSize, fill: this.legendColor, clipPath: `clip${index}`
     });
 
-    // the "y" appears to be the baseline, not an actually-useful coordinate.
-    // so, assume the descender isn't more than 25% taller.
-    const clip = new ClipPath(`clip${index}`, new Rect({ x: textX, y: y, width: textWidth, height: textHeight * 1.25 }))
     return [ colorRect, text, clip ];
   }
 
-  computeYLines(count: number = 5) {
-    const interval = roundToCurrency((this.top - this.bottom) / count);
+  yToPixel(y: number, box: Box): number {
+    const scale = 1 - ((y - this.bottom) / (this.top - this.bottom));
+    return box.y + scale * box.height;
+  }
+
+  xToPixel(x: number, box: Box): number {
+    return box.x + ((x - this.left) / (this.right - this.left)) * box.width;
+  }
+
+  computeYLines(): number[] {
+    if (this.yLineCount == 0) return [];
+    const interval = ceilToCurrency((this.top - this.bottom) / this.yLineCount);
     const yBase = floorToPrecision(this.bottom, 1);
     return [ this.bottom, this.top ].concat(
-      range(0, count).map(i => yBase + (i + 1) * interval).filter(y => y > this.bottom && y < this.top)
+      range(0, this.yLineCount).map(i => yBase + (i + 1) * interval).filter(y => y > this.bottom && y < this.top)
     );
   }
 
-  computeXLines() {
+  computeXLines(box: Box): number[] {
     // our labels are about 5 chars wide at most ("12:34", "05/17", "2019")
     // so 5x font size gives enough room for the label and good spacing, and
     // 1.25x font size is enough vertical room.
-
+    const gap = 5 * this.fontSize;
+    const count = Math.floor(box.width / gap);
+    return new TimeBuddy(this.options.timezone).timeGranularityFor(this.left, this.right, count);
   }
-  // computeXLines() {
-  //   roundedTimes = @dataTable.roundedTimes()
-  //   lastX = @xLabelBox.x - (3 * @options.fontSize)
-  //   xLines = []
-  //   helperLines = []
-  //   for i in [0 ... roundedTimes.length]
-  //     delta = roundedTimes[i]
-  //     continue if not delta?
-  //     ts = @dataTable.timestamps[i] + delta
-  //     px = @xToPixel(ts)
-  //     if px < lastX + (4 * @options.fontSize)
-  //       helperLines.push ts
-  //     else
-  //       xLines.push ts
-  //       lastX = px
-  //   [ xLines, helperLines ]
-
 }
 
 
-// @width = options.width
-// @height = options.height
-
-
-// # compute x/y guidelines
-// @yLines = @computeYLines()
-// [ @xLines, @xHelperLines ] = @computeXLines()
+function zpad(n: number): string {
+  return ("00" + n.toString()).slice(-2);
+}

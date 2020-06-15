@@ -66,6 +66,7 @@ export interface LineOptions {
   strokeLineCap?: string;
   strokeLineJoin?: string;
   fill?: string;
+  fillOpacity?: number;
   closeLoop?: boolean;
 }
 
@@ -98,6 +99,7 @@ export class Line implements ToXml {
     if (this.options.strokeLineCap) fields.push(`stroke-linecap="${this.options.strokeLineCap}"`);
     if (this.options.strokeLineJoin) fields.push(`stroke-linejoin="${this.options.strokeLineJoin}"`);
     if (this.options.fill) fields.push(`fill="${this.options.fill}"`);
+    if (this.options.fillOpacity !== undefined) fields.push(`fill-opacity="${this.options.fillOpacity}"`);
     return [ `<path d="${this.toPath()}" ${fields.join(" ")}/>` ];
   }
 }
