@@ -250,6 +250,15 @@ export class TimeSeries {
     return linearInterpolate(this.timestamps[left], this.timestamps[right], vl, vr, ts);
   }
 
+  getNearestTime(ts: number): number {
+    let right = binarySearch(this.timestamps, t => t >= ts);
+    let left = right - 1;
+    if (left < 0) return this.timestamps[right];
+    if (right >= this.timestamps.length) return this.timestamps[left];
+    const t1 = this.timestamps[left], t2 = this.timestamps[right];
+    return (Math.abs(t1 - ts) <= Math.abs(t2 - ts)) ? t1 : t2;
+  }
+
 
 
 

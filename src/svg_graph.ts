@@ -1,7 +1,7 @@
 import * as luxon from "luxon";
 import { floorToPrecision, ceilToPrecision, toSI, ceilToCurrency } from "display-si";
 import { range } from "./arrays";
-import { Box, buildSvg, ClipPath, Line, Rect, Text, ToXml } from "./svg";
+import { Box, buildSvg, Circle, ClipPath, Line, Rect, Text, ToXml } from "./svg";
 import { DAY, TimeBuddy, YEAR } from "./time";
 import { TimeSeries } from "./time_series";
 import { TimeSeriesList } from "./time_series_list";
@@ -34,6 +34,9 @@ export interface SvgGraphOptions {
 
   // thickness of line to use for drawing the data
   lineWidth?: number;
+
+  // when/if drawing highlights, how big should the dot be?
+  dotWidth?: number;
 
   // should the graph be a solid shape filled down?
   fill?: boolean;
@@ -76,6 +79,7 @@ const DEFAULT_OPTIONS = {
   aspectRatio: 16 / 9,
   yLines: 5,
   lineWidth: 3,
+  dotWidth: 8,
   fill: false,
   font: "monospace",
   fontSize: 20,
@@ -94,6 +98,12 @@ const DEFAULT_OPTIONS = {
   legendPadding: 5,
 };
 
+export interface GraphInstant {
+  timestamp: number;
+  xOffset: number;
+  values: (number | undefined)[];
+}
+
 
 export function buildSvgGraph(lines: TimeSeriesList, options: SvgGraphOptions = {}): string {
   return new SvgGraph(lines, options).draw();
@@ -107,6 +117,7 @@ export class SvgGraph {
   viewHeight: number;
   yLineCount: number;
   lineWidth: number;
+  dotWidth: number;
   fill: boolean;
   font: string;
   fontSize: number;
@@ -129,6 +140,15 @@ export class SvgGraph {
   left: number;
   right: number;
 
+  graphBox: Box;
+  titleBox: Box;
+  yLabelBox: Box;
+  xLabelBox: Box;
+  legendBox: Box;
+
+  cachedSvg?: ToXml[];
+  highlight?: GraphInstant;
+
   constructor(public lines: TimeSeriesList, public options: SvgGraphOptions = {}) {
     this.showLegend = this.options.showLegend ?? DEFAULT_OPTIONS.showLegend;
     const aspectRatio = this.options.aspectRatio ?? DEFAULT_OPTIONS.aspectRatio;
@@ -138,6 +158,7 @@ export class SvgGraph {
     this.viewHeight = Math.round(this.viewWidth / aspectRatio);
     this.yLineCount = this.options.yLines ?? DEFAULT_OPTIONS.yLines;
     this.lineWidth = this.options.lineWidth ?? DEFAULT_OPTIONS.lineWidth;
+    this.dotWidth = this.options.dotWidth ?? DEFAULT_OPTIONS.dotWidth;
     this.fill = this.options.fill ?? DEFAULT_OPTIONS.fill;
     this.font = this.options.font ?? DEFAULT_OPTIONS.font;
     this.fontSize = this.options.fontSize ?? DEFAULT_OPTIONS.fontSize;
@@ -161,11 +182,9 @@ export class SvgGraph {
     this.bottom = scaleToZero ? 0 : floorToPrecision(this.lines.minY, 2);
     this.left = this.lines.minX;
     this.right = this.lines.maxX;
-  }
 
-  draw(): string {
     /*
-     * the graph is in the center
+     * layout the boxes: the graph is in the center.
      *   - above it: the title
      *   - left of it: the Y axis labels
      *   - below it: the X axis labels, and optionally a legend
@@ -181,54 +200,103 @@ export class SvgGraph {
     const graphX = this.padding + yLabelWidth + this.innerPadding;
     let graphY = this.padding;
     if (this.options.title !== undefined) graphY += titleHeight + this.innerPadding;
-    const graphBox: Box = {
+    this.graphBox = {
       x: graphX,
       y: graphY,
       width: this.pixelWidth - this.padding - graphX,
       height: this.pixelHeight - this.padding - xLabelHeight - this.innerPadding - graphY,
     };
-    if (this.showLegend) graphBox.height -= this.padding + legendHeight;
+    if (this.showLegend) this.graphBox.height -= this.padding + legendHeight;
 
-    const titleBox: Box = { x: graphBox.x, y: this.padding, width: graphBox.width, height: titleHeight };
-    const yLabelBox: Box = { x: this.padding, y: graphBox.y, width: yLabelWidth, height: graphBox.height };
-    const xLabelBox: Box = {
-      x: graphBox.x, y: graphBox.y + graphBox.height + this.innerPadding, width: graphBox.width, height: xLabelHeight
+    this.titleBox = { x: this.graphBox.x, y: this.padding, width: this.graphBox.width, height: titleHeight };
+    this.yLabelBox = { x: this.padding, y: this.graphBox.y, width: yLabelWidth, height: this.graphBox.height };
+    this.xLabelBox = {
+      x: this.graphBox.x,
+      y: this.graphBox.y + this.graphBox.height + this.innerPadding,
+      width: this.graphBox.width,
+      height: xLabelHeight,
     };
-    const legendBox: Box = {
-      x: graphBox.x, y: this.pixelHeight - this.padding - legendHeight, width: graphBox.width, height: legendHeight
+    this.legendBox = {
+      x: this.graphBox.x,
+      y: this.pixelHeight - this.padding - legendHeight,
+      width: this.graphBox.width,
+      height: legendHeight,
     };
+  }
 
-    const yLines = this.computeYLines();
-    const xLines = this.computeXLines(graphBox);
+  /*
+   * return highlight data for the closest time to the mouse cursor, if it's
+   * inside the graph box.
+   *
+   * `xFrac` and `yFrac` are between [0, 1] and indicate the mouse's relative
+   * position to the SVG's upper left corner. in a javascript mouse event,
+   * this is usually:
+   *
+   *     const xFrac = e.offsetX / e.target.clientWidth;
+   *     const yFrac = e.offsetY / e.target.clientHeight;
+   *
+   * but you can calculate your own offset if you have a more complicated
+   * layout.
+   */
+  nearestToMouse(xFrac: number, yFrac: number): GraphInstant | undefined {
+    const px = this.pixelWidth * xFrac, py = this.pixelHeight * yFrac;
+    if (py < this.graphBox.y || py > this.graphBox.y + this.graphBox.height) return undefined;
+    const t = this.pixelToX(px);
+    if (t === undefined) return undefined;
+    return this.nearestInstant(t);
+  }
 
-    // ----- build the elements
+  /*
+   * return highlight data for the closest time to the requested time, if
+   * it's inside the range being drawn.
+   */
+  nearestInstant(seconds: number): GraphInstant | undefined {
+    const timestamp = this.lines.list[0].getNearestTime(seconds);
+    if (timestamp == undefined) return undefined;
+    const xOffset = this.xToPixel(timestamp);
+    return { timestamp, xOffset, values: this.lines.list.map(ts => ts.interpolate(timestamp)) };
+  }
 
-    let elements: ToXml[] = [];
-    elements.push(new Rect(graphBox, { stroke: this.gridColor, strokeWidth: 1, fill: this.graphBackgroundColor }));
+  setHighlight(instant?: GraphInstant) {
+    this.highlight = instant;
+  }
 
-    if (this.options.title !== undefined) {
-      elements.push(this.drawTitle(titleBox, this.options.title));
+  draw(): string {
+    if (this.cachedSvg === undefined) {
+      const yLines = this.computeYLines();
+      const xLines = this.computeXLines();
+
+      // ----- build the elements
+
+      let elements: ToXml[] = [];
+      elements.push(new Rect(this.graphBox, { stroke: this.gridColor, strokeWidth: 1, fill: this.graphBackgroundColor }));
+
+      if (this.options.title !== undefined) {
+        elements.push(this.drawTitle(this.options.title));
+      }
+
+      elements = elements.concat(
+        this.drawYLabels(yLines),
+        this.drawYLines(yLines),
+        this.drawXLabels(xLines),
+        this.drawXLines(xLines),
+      );
+
+      this.lines.list.forEach((ts, i) => {
+        const color = this.colors[i % this.colors.length];
+        elements.push(this.drawTimeSeries(ts, color));
+        if (this.showLegend) {
+          for (const elem of this.drawLegend(this.legendBox, i, ts.name, color, this.legendPadding)) {
+            elements.push(elem);
+          }
+        }
+      });
+
+      this.cachedSvg = elements;
     }
 
-    elements = elements.concat(
-      this.drawYLabels(yLines, yLabelBox),
-      this.drawYLines(yLines, graphBox),
-      this.drawXLabels(xLines, xLabelBox),
-      this.drawXLines(xLines, graphBox),
-    );
-
-    this.lines.list.forEach((ts, i) => {
-      const color = this.colors[i % this.colors.length];
-      elements.push(this.drawTimeSeries(ts, graphBox, color));
-      if (this.showLegend) {
-        for (const elem of this.drawLegend(legendBox, i, ts.name, color, this.legendPadding)) {
-          elements.push(elem);
-        }
-      }
-    });
-
     // build the actual SVG
-    return buildSvg(elements, {
+    return buildSvg(this.cachedSvg.concat(this.drawHighlight()), {
       viewWidth: this.viewWidth,
       viewHeight: this.viewHeight,
       pixelWidth: this.pixelWidth,
@@ -237,8 +305,8 @@ export class SvgGraph {
     })
   }
 
-  drawTitle(box: Box, title: string): ToXml {
-    return new Text({ x: box.x + box.width / 2, y: box.y + this.fontSize }, title, {
+  drawTitle(title: string): ToXml {
+    return new Text({ x: this.titleBox.x + this.titleBox.width / 2, y: this.titleBox.y + this.fontSize }, title, {
       fontFamily: this.titleFont,
       fontSize: this.titleFontSize,
       fill: this.titleColor,
@@ -247,39 +315,39 @@ export class SvgGraph {
     });
   }
 
-  drawYLabels(lines: number[], box: Box): ToXml[] {
+  drawYLabels(lines: number[]): ToXml[] {
     // this is a hack because "dominant-baseline" doesn't work.
     const textOffset = Math.round(this.fontSize / 3);
 
     return lines.map(y => {
-      const px = box.x + box.width;
-      const py = this.yToPixel(y, box) + textOffset;
+      const px = this.yLabelBox.x + this.yLabelBox.width;
+      const py = this.yToPixel(y) + textOffset;
       const options = { fontFamily: this.font, fontSize: this.fontSize, fill: this.labelColor, textAnchor: "end" };
       return new Text({ x: px, y: py }, toSI(y), options);
     });
   }
 
-  drawYLines(lines: number[], box: Box): ToXml[] {
+  drawYLines(lines: number[]): ToXml[] {
     return lines.map(y => {
       const points = [
-        { x: box.x, y: this.yToPixel(y, box) },
-        { x: box.x + box.width, y: this.yToPixel(y, box) },
+        { x: this.graphBox.x, y: this.yToPixel(y) },
+        { x: this.graphBox.x + this.graphBox.width, y: this.yToPixel(y) },
       ];
       return new Line(points, { stroke: this.gridColor, strokeWidth: 1, fill: "none" });
     });
   }
 
-  drawXLabels(lines: number[], box: Box): ToXml[] {
+  drawXLabels(lines: number[]): ToXml[] {
     let scale = this.lines.interval >= YEAR ? 2 : (this.lines.interval >= DAY ? 1 : 0);
     const options = { fontFamily: this.font, fontSize: this.fontSize, fill: this.labelColor, textAnchor: "middle" };
     const margin = 2.5 * this.fontSize;
 
     return lines.filter(t => {
-      const x = this.xToPixel(t, box);
-      return x >= box.x + margin && x <= box.x + box.width - margin;
+      const x = this.xToPixel(t);
+      return x >= this.xLabelBox.x + margin && x <= this.xLabelBox.x + this.xLabelBox.width - margin;
     }).map(x => {
-      const px = this.xToPixel(x, box);
-      const py = box.y + this.fontSize;
+      const px = this.xToPixel(x);
+      const py = this.xLabelBox.y + this.fontSize;
       const time = luxon.DateTime.fromSeconds(x, { zone: this.options.timezone });
 
       let label: string;
@@ -299,26 +367,26 @@ export class SvgGraph {
     });
   }
 
-  drawXLines(lines: number[], box: Box): ToXml[] {
+  drawXLines(lines: number[]): ToXml[] {
     return lines.map(x => {
       const points = [
-        { x: this.xToPixel(x, box), y: box.y },
-        { x: this.xToPixel(x, box), y: box.y + box.height },
+        { x: this.xToPixel(x), y: this.graphBox.y },
+        { x: this.xToPixel(x), y: this.graphBox.y + this.graphBox.height },
       ];
       return new Line(points, { stroke: this.gridColor, strokeWidth: 1, fill: "none" });
     });
   }
 
-  drawTimeSeries(ts: TimeSeries, box: Box, color: string): ToXml {
+  drawTimeSeries(ts: TimeSeries, color: string): ToXml {
     const points = ts.toPoints().map(point => {
       return point.value == undefined ? undefined :
-        { x: this.xToPixel(point.timestamp, box), y: this.yToPixel(point.value, box) };
+        { x: this.xToPixel(point.timestamp), y: this.yToPixel(point.value) };
     });
     let fill = "none";
     let closeLoop = false;
     if (this.fill) {
-      points.unshift({ x: box.x, y: box.y + box.height });
-      points.push({ x: box.x + box.width, y: box.y + box.height });
+      points.unshift({ x: this.graphBox.x, y: this.graphBox.y + this.graphBox.height });
+      points.push({ x: this.graphBox.x + this.graphBox.width, y: this.graphBox.y + this.graphBox.height });
       fill = color;
       closeLoop = true;
     }
@@ -358,13 +426,33 @@ export class SvgGraph {
     return [ colorRect, text, clip ];
   }
 
-  yToPixel(y: number, box: Box): number {
-    const scale = 1 - ((y - this.bottom) / (this.top - this.bottom));
-    return box.y + scale * box.height;
+  drawHighlight(): ToXml[] {
+    if (!this.highlight) return [];
+    const x = this.xToPixel(this.highlight.timestamp);
+
+    const dots: Circle[] = [];
+    this.highlight.values.forEach((v, i) => {
+      if (v === undefined) return;
+      const color = this.colors[i % this.colors.length];
+      const options = { fill: color, stroke: color, strokeWidth: 1 };
+      dots.push(new Circle({ x, y: this.yToPixel(v) }, this.dotWidth / 2, options));
+    });
+    return dots;
   }
 
-  xToPixel(x: number, box: Box): number {
-    return box.x + ((x - this.left) / (this.right - this.left)) * box.width;
+  yToPixel(y: number): number {
+    const scale = 1 - ((y - this.bottom) / (this.top - this.bottom));
+    return this.graphBox.y + scale * this.graphBox.height;
+  }
+
+  xToPixel(x: number): number {
+    return this.graphBox.x + ((x - this.left) / (this.right - this.left)) * this.graphBox.width;
+  }
+
+  pixelToX(px: number): number | undefined {
+    if (px < this.graphBox.x || px >= this.graphBox.x + this.graphBox.width) return undefined;
+    const xFrac = (px - this.graphBox.x) / this.graphBox.width;
+    return xFrac * (this.right - this.left) + this.left;
   }
 
   computeYLines(): number[] {
@@ -376,12 +464,12 @@ export class SvgGraph {
     );
   }
 
-  computeXLines(box: Box): number[] {
+  computeXLines(): number[] {
     // our labels are about 5 chars wide at most ("12:34", "05/17", "2019")
     // so 5x font size gives enough room for the label and good spacing, and
     // 1.25x font size is enough vertical room.
     const gap = 5 * this.fontSize;
-    const count = Math.floor(box.width / gap);
+    const count = Math.floor(this.graphBox.width / gap);
     return new TimeBuddy(this.options.timezone).timeGranularityFor(this.left, this.right, count);
   }
 }

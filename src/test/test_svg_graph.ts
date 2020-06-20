@@ -17,7 +17,7 @@ const SVG_FOOTER = `</svg>\n`;
 
 describe("SVG graph", () => {
   // make these tests work, no matter where you are, by forcing LA timezone.
-  const t = new TimeBuddy("America/Los_Angeles");
+  const timezone = "America/Los_Angeles";
 
   // wed 2020-06-10, 21:15:00 PDT
   const bikeDay = 1591848900;
@@ -32,13 +32,13 @@ describe("SVG graph", () => {
       TimeSeries.fromArrays("minnie", hour, [ 30, 30, 35, 30, 30, 35, 30, 30, 35, 30, 30, 35 ]),
     ]);
 
-    const graph1 = buildSvgGraph(list, { title: "hello", backgroundColor: "#f8f8ff", showLegend: false, fill: false });
+    const graph1 = buildSvgGraph(list, { title: "hello", backgroundColor: "#f8f8ff", showLegend: false, fill: false, timezone });
     fs.readFileSync("./src/test/data/simple1.svg").toString().should.eql(graph1);
-    const graph2 = buildSvgGraph(list, { title: "hello", backgroundColor: "#f8f8ff", showLegend: false, fill: true });
+    const graph2 = buildSvgGraph(list, { title: "hello", backgroundColor: "#f8f8ff", showLegend: false, fill: true, timezone });
     fs.readFileSync("./src/test/data/simple1-fill.svg").toString().should.eql(graph2);
-    const graph3 = buildSvgGraph(list, { title: "hello", backgroundColor: "#f8f8ff", showLegend: true, fill: false });
+    const graph3 = buildSvgGraph(list, { title: "hello", backgroundColor: "#f8f8ff", showLegend: true, fill: false, timezone });
     fs.readFileSync("./src/test/data/simple1-legend.svg").toString().should.eql(graph3);
-    const graph4 = buildSvgGraph(list, { title: "hello", backgroundColor: "#f8f8ff", showLegend: true, fill: true });
+    const graph4 = buildSvgGraph(list, { title: "hello", backgroundColor: "#f8f8ff", showLegend: true, fill: true, timezone });
     fs.readFileSync("./src/test/data/simple1-legend-fill.svg").toString().should.eql(graph4);
   });
 });
