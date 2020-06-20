@@ -36,6 +36,30 @@ export interface ToXml {
 }
 
 
+export interface CircleOptions {
+  stroke?: string;
+  strokeWidth?: number;
+  fill?: string;
+}
+
+export class Circle implements ToXml {
+  constructor(public center: Point, public radius: number, public options: CircleOptions = {}) {
+    // pass
+  }
+
+  toXml(indent: number): string[] {
+    const fields: string[] = [];
+    if (this.options.stroke) fields.push(`stroke="${this.options.stroke}"`);
+    if (this.options.strokeWidth) fields.push(`stroke-width="${this.options.strokeWidth}"`);
+    if (this.options.fill) fields.push(`fill="${this.options.fill}"`);
+    const extra = fields.join(" ");
+    return [
+      `<circle cx="${this.center.x}" cy="${this.center.y}" r="${this.radius}" ${extra}/>`
+    ];
+  }
+}
+
+
 export interface RectOptions {
   stroke?: string;
   strokeWidth?: number;

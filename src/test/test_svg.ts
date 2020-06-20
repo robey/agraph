@@ -1,4 +1,4 @@
-import { buildSvg, ClipPath, Line, LineOptions, Rect, Text, TextOptions } from "../svg";
+import { buildSvg, Circle, ClipPath, Line, LineOptions, Rect, Text, TextOptions } from "../svg";
 
 import "should";
 import "source-map-support/register";
@@ -13,6 +13,15 @@ const SVG_FOOTER = `</svg>\n`;
 describe("SVG", () => {
   it("empty", () => {
     buildSvg([], {}).should.eql(SVG_HEADER + "\n" + SVG_FOOTER);
+  });
+
+  it("circle", () => {
+    const circle = new Circle({ x: 1, y: 2 }, 3, { stroke: "red", strokeWidth: 4, fill: "orange" });
+    buildSvg([ circle ], {}).should.eql(
+      SVG_HEADER +
+      `  <circle cx="1" cy="2" r="3" stroke="red" stroke-width="4" fill="orange"/>\n` +
+      SVG_FOOTER
+    );
   });
 
   it("rectangle", () => {
