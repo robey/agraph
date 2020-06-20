@@ -18,7 +18,8 @@
     "build": "tsc",
     "clean": "rm -rf lib",
     "distclean": "npm run clean && rm -rf node_modules",
-    "test": "npm run build && mocha -R spec --colors --recursive lib/test"
+    "test": "npm run build && mocha -R spec --colors --recursive lib/test",
+    "webpack": "webpack-cli --display-error-details --env.NODE_ENV=production"
   },
   "dependencies": {
     "display-si": "^1.0.3",
@@ -31,7 +32,10 @@
     "mocha": "^7.2.0",
     "should": "^13.2.3",
     "source-map-support": "^0.5.19",
-    "typescript": "^3.9.3"
+    "ts-loader": "^7.0.5",
+    "typescript": "^3.9.3",
+    "webpack": "^4.43.0",
+    "webpack-cli": "^3.3.11"
   },
   "main": "./lib/index.js",
   "files": [
