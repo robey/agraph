@@ -24,7 +24,7 @@ export interface CellData {
 /*
  * a list of points, where the x axis is time (as a timestamp, in seconds),
  * and the x values are regularly spaced.
- * the y value may or m
+ * the y value may be missing on some points.
  */
 export class TimeSeries {
   timestamps: number[] = [];
