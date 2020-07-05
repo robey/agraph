@@ -37,7 +37,7 @@
     "webpack": "^4.43.0",
     "webpack-cli": "^3.3.11"
   },
-  "main": "./lib/index.js",
+  "main": "./lib/yeri.js",
   "files": [
     "lib",
     "bin/yeri"

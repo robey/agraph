@@ -1,77 +1,93 @@
-import * as luxon from "luxon";
 import { floorToPrecision, ceilToPrecision, toSI, ceilToCurrency } from "display-si";
+import * as luxon from "luxon";
+
 import { range } from "./arrays";
 import { Box, buildSvg, Circle, ClipPath, Line, Rect, Text, ToXml } from "./svg";
 import { DAY, TimeBuddy, YEAR } from "./time";
 import { TimeSeries } from "./time_series";
 import { TimeSeriesList } from "./time_series_list";
 
-export interface SvgGraphOptions {
+// hint passed to xAxisLabelFormat, to indicate how broad the X range is right now
+export enum Scale {
+  MINUTES = 0,
+  DAYS = 1,
+  YEARS = 2,
+}
+
+export interface SvgGraphConfig {
   title?: string;
 
   // in case you don't want the background to be transparent
   backgroundColor?: string;
 
   // add a legend of colors-to-metrics at the bottom?
-  showLegend?: boolean;
+  showLegend: boolean;
 
   // force the graph to start at y = 0? (recommended)
-  scaleToZero?: boolean;
+  scaleToZero: boolean;
 
   // width of image, in millimeters:
-  viewWidth?: number;
+  viewWidth: number;
   // width of image, in virtual pixels:
-  pixelWidth?: number;
+  pixelWidth: number;
 
   // ratio of width to height (should be PHI or 16/9 or similar)
-  aspectRatio?: number;
+  aspectRatio: number;
+  // or, if you'd rather specify the pixel height directly:
+  pixelHeight?: number;
 
   // set a time zone? default is "local"
   timezone?: string;
 
   // aim for this many vertical grid lines
-  yLines?: number;
+  yLines: number;
 
   // thickness of line to use for drawing the data
-  lineWidth?: number;
+  lineWidth: number;
 
   // when/if drawing highlights, how big should the dot be?
-  dotWidth?: number;
+  dotWidth: number;
 
   // should the graph be a solid shape filled down?
-  fill?: boolean;
+  fill: boolean;
 
   // font to use for axis labels and legend
-  font?: string;
-  fontSize?: number;
+  font: string;
+  fontSize: number;
 
   // bigger font for the title
-  titleFont?: string;
-  titleFontSize?: number;
-  titleFontWeight?: string;
-  titleColor?: string;
+  titleFont: string;
+  titleFontSize: number;
+  titleFontWeight: string;
+  titleColor: string;
+
+  // customize the x-axis or y-axis labels? and how wide (in points) to allow for them?
+  xAxisLabelFormat: (time: luxon.DateTime, scale: Scale) => string;
+  yAxisLabelFormat: (n: number) => string;
+  xAxisLabelWidthPt: number;
+  yAxisLabelWidthPt: number;
 
   // for drawing the lines on
-  graphBackgroundColor?: string;
+  graphBackgroundColor: string;
   // primary and secondary colors for drawing grid lines
-  gridColor?: string;
-  gridColor2?: string;
+  gridColor: string;
+  gridColor2: string;
   // color for x/y labels
-  labelColor?: string;
+  labelColor: string;
   // color for legend text
-  legendColor?: string;
+  legendColor: string;
   // color for lines
-  colors?: string[];
+  colors: string[];
 
   // padding around the outside edge and between major boxes, in pixels
-  padding?: number;
+  padding: number;
   // padding between the labels and graph, in pixels
-  innerPadding?: number;
+  innerPadding: number;
   // extra spacing between lines in the legend
-  legendPadding?: number;
+  legendPadding: number;
 }
 
-const DEFAULT_OPTIONS = {
+const DEFAULTS: SvgGraphConfig = {
   showLegend: true,
   scaleToZero: true,
   viewWidth: 120,
@@ -87,6 +103,19 @@ const DEFAULT_OPTIONS = {
   titleFontSize: 24,
   titleFontWeight: "bold",
   titleColor: "#660099",
+  xAxisLabelFormat: (time: luxon.DateTime, scale: Scale) => {
+    switch (scale) {
+      case Scale.YEARS:
+        return time.year.toString();
+      case Scale.DAYS:
+        return `${time.month}/${zpad(time.day)}`;
+      default:
+        return `${time.hour}:${zpad(time.minute)}`;
+    }
+  },
+  yAxisLabelFormat: toSI,
+  xAxisLabelWidthPt: 5,  // gives a comfy padding to each side
+  yAxisLabelWidthPt: 4,  // 4pt is usually enough for 6 chars
   graphBackgroundColor: "#eeeeff",
   gridColor: "#555555",
   gridColor2: "#bbbbbb",
@@ -101,39 +130,19 @@ const DEFAULT_OPTIONS = {
 export interface GraphInstant {
   timestamp: number;
   xOffset: number;
+  xPercent: number;
   values: (number | undefined)[];
 }
 
 
-export function buildSvgGraph(lines: TimeSeriesList, options: SvgGraphOptions = {}): string {
+export function buildSvgGraph(lines: TimeSeriesList, options: Partial<SvgGraphConfig> = {}): string {
   return new SvgGraph(lines, options).draw();
 }
 
 export class SvgGraph {
-  showLegend: boolean;
-  pixelWidth: number;
+  config: SvgGraphConfig;
   pixelHeight: number;
-  viewWidth: number;
   viewHeight: number;
-  yLineCount: number;
-  lineWidth: number;
-  dotWidth: number;
-  fill: boolean;
-  font: string;
-  fontSize: number;
-  titleFont: string;
-  titleFontSize: number;
-  titleFontWeight: string;
-  titleColor: string;
-  graphBackgroundColor: string;
-  gridColor: string;
-  gridColor2: string;
-  labelColor: string;
-  legendColor: string;
-  colors: string[];
-  padding: number;
-  innerPadding: number;
-  legendPadding: number;
 
   top: number;
   bottom: number;
@@ -149,37 +158,19 @@ export class SvgGraph {
   cachedSvg?: ToXml[];
   highlight?: GraphInstant;
 
-  constructor(public lines: TimeSeriesList, public options: SvgGraphOptions = {}) {
-    this.showLegend = this.options.showLegend ?? DEFAULT_OPTIONS.showLegend;
-    const aspectRatio = this.options.aspectRatio ?? DEFAULT_OPTIONS.aspectRatio;
-    this.pixelWidth = this.options.pixelWidth ?? DEFAULT_OPTIONS.pixelWidth;
-    this.pixelHeight = Math.round(this.pixelWidth / aspectRatio);
-    this.viewWidth = this.options.viewWidth ?? DEFAULT_OPTIONS.viewWidth;
-    this.viewHeight = Math.round(this.viewWidth / aspectRatio);
-    this.yLineCount = this.options.yLines ?? DEFAULT_OPTIONS.yLines;
-    this.lineWidth = this.options.lineWidth ?? DEFAULT_OPTIONS.lineWidth;
-    this.dotWidth = this.options.dotWidth ?? DEFAULT_OPTIONS.dotWidth;
-    this.fill = this.options.fill ?? DEFAULT_OPTIONS.fill;
-    this.font = this.options.font ?? DEFAULT_OPTIONS.font;
-    this.fontSize = this.options.fontSize ?? DEFAULT_OPTIONS.fontSize;
-    this.titleFont = this.options.titleFont ?? DEFAULT_OPTIONS.titleFont;
-    this.titleFontSize = this.options.titleFontSize ?? DEFAULT_OPTIONS.titleFontSize;
-    this.titleFontWeight = this.options.titleFontWeight ?? DEFAULT_OPTIONS.titleFontWeight;
-    this.titleColor = this.options.titleColor ?? DEFAULT_OPTIONS.titleColor;
-    this.graphBackgroundColor = this.options.graphBackgroundColor ?? DEFAULT_OPTIONS.graphBackgroundColor;
-    this.gridColor = this.options.gridColor ?? DEFAULT_OPTIONS.gridColor;
-    this.gridColor2 = this.options.gridColor2 ?? DEFAULT_OPTIONS.gridColor2;
-    this.labelColor = this.options.labelColor ?? DEFAULT_OPTIONS.labelColor;
-    this.legendColor = this.options.legendColor ?? DEFAULT_OPTIONS.legendColor;
-    this.colors = this.options.colors ?? DEFAULT_OPTIONS.colors;
-    this.padding = this.options.padding ?? DEFAULT_OPTIONS.padding;
-    this.innerPadding = this.options.innerPadding ?? DEFAULT_OPTIONS.innerPadding;
-    this.legendPadding = this.options.legendPadding ?? DEFAULT_OPTIONS.legendPadding;
-    const scaleToZero = this.options.scaleToZero ?? DEFAULT_OPTIONS.scaleToZero;
+  constructor(public lines: TimeSeriesList, public options: Partial<SvgGraphConfig> = {}) {
+    this.config = Object.assign({}, DEFAULTS, options);
+    if (options.pixelHeight) {
+      this.pixelHeight = options.pixelHeight;
+      this.config.aspectRatio = this.config.pixelWidth / this.pixelHeight;
+    } else {
+      this.pixelHeight = Math.round(this.config.pixelWidth / this.config.aspectRatio);
+    }
+    this.viewHeight = Math.round(this.config.viewWidth / this.config.aspectRatio);
 
     // find a good bounding box for the graph itself
     this.top = ceilToPrecision(this.lines.maxY * 1.1, 2);
-    this.bottom = scaleToZero ? 0 : floorToPrecision(this.lines.minY, 2);
+    this.bottom = this.config.scaleToZero ? 0 : floorToPrecision(this.lines.minY, 2);
     this.left = this.lines.minX;
     this.right = this.lines.maxX;
 
@@ -192,35 +183,48 @@ export class SvgGraph {
      * padding".
      */
     const legendLines = Math.ceil(this.lines.list.length / 2);
-    const titleHeight = 1.25 * this.titleFontSize;
-    const yLabelWidth = 4 * this.fontSize;  // enough for 6 chars
-    const xLabelHeight = 1.25 * this.fontSize;
-    const legendHeight = (legendLines + 0.25) * this.fontSize + (legendLines - 1) * this.legendPadding;
+    const titleHeight = 1.25 * this.config.titleFontSize;
+    const yLabelWidth = this.config.yAxisLabelWidthPt * this.config.fontSize;  // enough for 6 chars
+    const xLabelHeight = 1.25 * this.config.fontSize;
+    const legendHeight = (legendLines + 0.25) * this.config.fontSize + (legendLines - 1) * this.config.legendPadding;
 
-    const graphX = this.padding + yLabelWidth + this.innerPadding;
-    let graphY = this.padding;
-    if (this.options.title !== undefined) graphY += titleHeight + this.innerPadding;
+    const graphX = this.config.padding + yLabelWidth + this.config.innerPadding;
+    let graphY = this.config.padding;
+    if (this.options.title !== undefined) graphY += titleHeight + this.config.innerPadding;
     this.graphBox = {
       x: graphX,
       y: graphY,
-      width: this.pixelWidth - this.padding - graphX,
-      height: this.pixelHeight - this.padding - xLabelHeight - this.innerPadding - graphY,
+      width: this.config.pixelWidth - this.config.padding - graphX,
+      height: this.pixelHeight - this.config.padding - xLabelHeight - this.config.innerPadding - graphY,
     };
-    if (this.showLegend) this.graphBox.height -= this.padding + legendHeight;
+    if (this.config.showLegend) this.graphBox.height -= this.config.padding + legendHeight;
 
-    this.titleBox = { x: this.graphBox.x, y: this.padding, width: this.graphBox.width, height: titleHeight };
-    this.yLabelBox = { x: this.padding, y: this.graphBox.y, width: yLabelWidth, height: this.graphBox.height };
+    this.titleBox = { x: this.graphBox.x, y: this.config.padding, width: this.graphBox.width, height: titleHeight };
+    this.yLabelBox = { x: this.config.padding, y: this.graphBox.y, width: yLabelWidth, height: this.graphBox.height };
     this.xLabelBox = {
       x: this.graphBox.x,
-      y: this.graphBox.y + this.graphBox.height + this.innerPadding,
+      y: this.graphBox.y + this.graphBox.height + this.config.innerPadding,
       width: this.graphBox.width,
       height: xLabelHeight,
     };
     this.legendBox = {
       x: this.graphBox.x,
-      y: this.pixelHeight - this.padding - legendHeight,
+      y: this.pixelHeight - this.config.padding - legendHeight,
       width: this.graphBox.width,
       height: legendHeight,
+    };
+  }
+
+  /*
+   * return the borders of the actual graph within the SVG, as fractions of
+   * the overall SVG size. all numbers will be between 0 and 1.
+   */
+  getMouseGraphBox(): Box {
+    return {
+      x: this.graphBox.x / this.config.pixelWidth,
+      y: this.graphBox.y / this.pixelHeight,
+      width: this.graphBox.width / this.config.pixelWidth,
+      height: this.graphBox.height / this.pixelHeight
     };
   }
 
@@ -239,7 +243,7 @@ export class SvgGraph {
    * layout.
    */
   nearestToMouse(xFrac: number, yFrac: number): GraphInstant | undefined {
-    const px = this.pixelWidth * xFrac, py = this.pixelHeight * yFrac;
+    const px = this.config.pixelWidth * xFrac, py = this.pixelHeight * yFrac;
     if (py < this.graphBox.y || py > this.graphBox.y + this.graphBox.height) return undefined;
     const t = this.pixelToX(px);
     if (t === undefined) return undefined;
@@ -254,7 +258,8 @@ export class SvgGraph {
     const timestamp = this.lines.list[0].getNearestTime(seconds);
     if (timestamp == undefined) return undefined;
     const xOffset = this.xToPixel(timestamp);
-    return { timestamp, xOffset, values: this.lines.list.map(ts => ts.interpolate(timestamp)) };
+    const xPercent = (xOffset - this.graphBox.x) / this.graphBox.width;
+    return { timestamp, xOffset, xPercent, values: this.lines.list.map(ts => ts.interpolate(timestamp)) };
   }
 
   setHighlight(instant?: GraphInstant) {
@@ -269,7 +274,9 @@ export class SvgGraph {
       // ----- build the elements
 
       let elements: ToXml[] = [];
-      elements.push(new Rect(this.graphBox, { stroke: this.gridColor, strokeWidth: 1, fill: this.graphBackgroundColor }));
+      elements.push(new Rect(this.graphBox, {
+        stroke: this.config.gridColor, strokeWidth: 1, fill: this.config.graphBackgroundColor
+      }));
 
       if (this.options.title !== undefined) {
         elements.push(this.drawTitle(this.options.title));
@@ -283,10 +290,10 @@ export class SvgGraph {
       );
 
       this.lines.list.forEach((ts, i) => {
-        const color = this.colors[i % this.colors.length];
+        const color = this.config.colors[i % this.config.colors.length];
         elements.push(this.drawTimeSeries(ts, color));
-        if (this.showLegend) {
-          for (const elem of this.drawLegend(this.legendBox, i, ts.name, color, this.legendPadding)) {
+        if (this.config.showLegend) {
+          for (const elem of this.drawLegend(this.legendBox, i, ts.name, color, this.config.legendPadding)) {
             elements.push(elem);
           }
         }
@@ -297,33 +304,37 @@ export class SvgGraph {
 
     // build the actual SVG
     return buildSvg(this.cachedSvg.concat(this.drawHighlight()), {
-      viewWidth: this.viewWidth,
+      viewWidth: this.config.viewWidth,
       viewHeight: this.viewHeight,
-      pixelWidth: this.pixelWidth,
+      pixelWidth: this.config.pixelWidth,
       pixelHeight: this.pixelHeight,
       backgroundColor: this.options.backgroundColor
     })
   }
 
   drawTitle(title: string): ToXml {
-    return new Text({ x: this.titleBox.x + this.titleBox.width / 2, y: this.titleBox.y + this.fontSize }, title, {
-      fontFamily: this.titleFont,
-      fontSize: this.titleFontSize,
-      fill: this.titleColor,
-      fontWeight: this.titleFontWeight,
+    return new Text({
+      x: this.titleBox.x + this.titleBox.width / 2, y: this.titleBox.y + this.config.fontSize
+    }, title, {
+      fontFamily: this.config.titleFont,
+      fontSize: this.config.titleFontSize,
+      fill: this.config.titleColor,
+      fontWeight: this.config.titleFontWeight,
       textAnchor: "middle"
     });
   }
 
   drawYLabels(lines: number[]): ToXml[] {
     // this is a hack because "dominant-baseline" doesn't work.
-    const textOffset = Math.round(this.fontSize / 3);
+    const textOffset = Math.round(this.config.fontSize / 3);
 
     return lines.map(y => {
       const px = this.yLabelBox.x + this.yLabelBox.width;
       const py = this.yToPixel(y) + textOffset;
-      const options = { fontFamily: this.font, fontSize: this.fontSize, fill: this.labelColor, textAnchor: "end" };
-      return new Text({ x: px, y: py }, toSI(y), options);
+      const options = {
+        fontFamily: this.config.font, fontSize: this.config.fontSize, fill: this.config.labelColor, textAnchor: "end"
+      };
+      return new Text({ x: px, y: py }, this.config.yAxisLabelFormat(y), options);
     });
   }
 
@@ -333,37 +344,25 @@ export class SvgGraph {
         { x: this.graphBox.x, y: this.yToPixel(y) },
         { x: this.graphBox.x + this.graphBox.width, y: this.yToPixel(y) },
       ];
-      return new Line(points, { stroke: this.gridColor, strokeWidth: 1, fill: "none" });
+      return new Line(points, { stroke: this.config.gridColor, strokeWidth: 1, fill: "none" });
     });
   }
 
   drawXLabels(lines: number[]): ToXml[] {
-    let scale = this.lines.interval >= YEAR ? 2 : (this.lines.interval >= DAY ? 1 : 0);
-    const options = { fontFamily: this.font, fontSize: this.fontSize, fill: this.labelColor, textAnchor: "middle" };
-    const margin = 2.5 * this.fontSize;
+    let scale = this.lines.interval >= YEAR ? Scale.YEARS : (this.lines.interval >= DAY ? Scale.DAYS : Scale.MINUTES);
+    const options = {
+      fontFamily: this.config.font, fontSize: this.config.fontSize, fill: this.config.labelColor, textAnchor: "middle"
+    };
+    const margin = this.config.xAxisLabelWidthPt * this.config.fontSize / 2;
 
     return lines.filter(t => {
       const x = this.xToPixel(t);
       return x >= this.xLabelBox.x + margin && x <= this.xLabelBox.x + this.xLabelBox.width - margin;
     }).map(x => {
       const px = this.xToPixel(x);
-      const py = this.xLabelBox.y + this.fontSize;
+      const py = this.xLabelBox.y + this.config.fontSize;
       const time = luxon.DateTime.fromSeconds(x, { zone: this.options.timezone });
-
-      let label: string;
-      switch (scale) {
-        case 2:
-          label = time.year.toString();
-          break;
-        case 1:
-          label = `${time.month}/${zpad(time.day)}`;
-          break;
-        default:
-          label = `${time.hour}:${zpad(time.minute)}`;
-          break;
-      }
-
-      return new Text({ x: px, y: py }, label, options);
+      return new Text({ x: px, y: py }, this.config.xAxisLabelFormat(time, scale), options);
     });
   }
 
@@ -373,7 +372,7 @@ export class SvgGraph {
         { x: this.xToPixel(x), y: this.graphBox.y },
         { x: this.xToPixel(x), y: this.graphBox.y + this.graphBox.height },
       ];
-      return new Line(points, { stroke: this.gridColor, strokeWidth: 1, fill: "none" });
+      return new Line(points, { stroke: this.config.gridColor, strokeWidth: 1, fill: "none" });
     });
   }
 
@@ -384,7 +383,7 @@ export class SvgGraph {
     });
     let fill = "none";
     let closeLoop = false;
-    if (this.fill) {
+    if (this.config.fill) {
       points.unshift({ x: this.graphBox.x, y: this.graphBox.y + this.graphBox.height });
       points.push({ x: this.graphBox.x + this.graphBox.width, y: this.graphBox.y + this.graphBox.height });
       fill = color;
@@ -392,7 +391,7 @@ export class SvgGraph {
     }
     const options = {
       stroke: color,
-      strokeWidth: this.lineWidth,
+      strokeWidth: this.config.lineWidth,
       strokeLineCap: "round",
       strokeLineJoin: "round",
       fill,
@@ -405,22 +404,25 @@ export class SvgGraph {
   drawLegend(box: Box, index: number, name: string, color: string, spacing: number = 0): ToXml[] {
     // put the first half down the left column, then the second half down the right column.
     const leftColumn = Math.ceil(this.lines.list.length / 2);
-    const y = box.y + (this.fontSize + spacing) * (index % leftColumn);
+    const y = box.y + (this.config.fontSize + spacing) * (index % leftColumn);
     const x = box.x + (box.width / 2) * Math.floor(index / leftColumn);
-    const colorSize = 0.75 * this.fontSize;
-    const colorBox = { x: x, y: y + this.fontSize - colorSize, width: colorSize, height: colorSize };
-    const colorRect = new Rect(colorBox, { stroke: this.gridColor, strokeWidth: 1, fill: color });
+    const colorSize = 0.75 * this.config.fontSize;
+    const colorBox = { x: x, y: y + this.config.fontSize - colorSize, width: colorSize, height: colorSize };
+    const colorRect = new Rect(colorBox, { stroke: this.config.gridColor, strokeWidth: 1, fill: color });
 
     // the "y" appears to be the baseline, not an actually-useful coordinate.
     // so, assume the descender isn't more than 25% taller.
     // the clip box is really to keep it constrained horizontally.
-    const textX = x + colorBox.width + this.innerPadding;
-    const textY = y + this.fontSize;
-    const textWidth = (box.width / 2) - this.innerPadding - this.padding - colorBox.width;
-    const textHeight = this.fontSize * 1.25;
+    const textX = x + colorBox.width + this.config.innerPadding;
+    const textY = y + this.config.fontSize;
+    const textWidth = (box.width / 2) - this.config.innerPadding - this.config.padding - colorBox.width;
+    const textHeight = this.config.fontSize * 1.25;
     const clip = new ClipPath(`clip${index}`, new Rect({ x: textX, y: y, width: textWidth, height: textHeight }))
     const text = new Text({ x: textX, y: textY }, name, {
-      fontFamily: this.font, fontSize: this.fontSize, fill: this.legendColor, clipPath: `clip${index}`
+      fontFamily: this.config.font,
+      fontSize: this.config.fontSize,
+      fill: this.config.legendColor,
+      clipPath: `clip${index}`
     });
 
     return [ colorRect, text, clip ];
@@ -433,9 +435,9 @@ export class SvgGraph {
     const dots: Circle[] = [];
     this.highlight.values.forEach((v, i) => {
       if (v === undefined) return;
-      const color = this.colors[i % this.colors.length];
+      const color = this.config.colors[i % this.config.colors.length];
       const options = { fill: color, stroke: color, strokeWidth: 1 };
-      dots.push(new Circle({ x, y: this.yToPixel(v) }, this.dotWidth / 2, options));
+      dots.push(new Circle({ x, y: this.yToPixel(v) }, this.config.dotWidth / 2, options));
     });
     return dots;
   }
@@ -456,11 +458,11 @@ export class SvgGraph {
   }
 
   computeYLines(): number[] {
-    if (this.yLineCount == 0) return [];
-    const interval = ceilToCurrency((this.top - this.bottom) / this.yLineCount);
+    if (this.config.yLines == 0) return [];
+    const interval = ceilToCurrency((this.top - this.bottom) / this.config.yLines);
     const yBase = floorToPrecision(this.bottom, 1);
     return [ this.bottom, this.top ].concat(
-      range(0, this.yLineCount).map(i => yBase + (i + 1) * interval).filter(y => y > this.bottom && y < this.top)
+      range(0, this.config.yLines).map(i => yBase + (i + 1) * interval).filter(y => y > this.bottom && y < this.top)
     );
   }
 
@@ -468,7 +470,7 @@ export class SvgGraph {
     // our labels are about 5 chars wide at most ("12:34", "05/17", "2019")
     // so 5x font size gives enough room for the label and good spacing, and
     // 1.25x font size is enough vertical room.
-    const gap = 5 * this.fontSize;
+    const gap = 5 * this.config.fontSize;
     const count = Math.floor(this.graphBox.width / gap);
     return new TimeBuddy(this.options.timezone).timeGranularityFor(this.left, this.right, count);
   }
