@@ -25,10 +25,14 @@ describe("SVG", () => {
   });
 
   it("rectangle", () => {
-    const rect = new Rect({ x: 1, y: 2, width: 3, height: 4 }, { stroke: "#ffffff", strokeWidth: 2, fill: "#ff0000" });
+    const rect = new Rect({
+      x: 1, y: 2, width: 3, height: 4
+    }, {
+      stroke: "#ffffff", strokeWidth: 2, fill: "#ff0000", opacity: 0.7,
+    });
     buildSvg([ rect ], {}).should.eql(
       SVG_HEADER +
-      `  <rect x="1" y="2" width="3" height="4" stroke="#ffffff" stroke-width="2" fill="#ff0000"/>\n` +
+      `  <rect x="1" y="2" width="3" height="4" stroke="#ffffff" stroke-width="2" fill="#ff0000" opacity="0.7"/>\n` +
       SVG_FOOTER
     );
   });

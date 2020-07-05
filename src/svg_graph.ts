@@ -7,11 +7,21 @@ import { DAY, TimeBuddy, YEAR } from "./time";
 import { TimeSeries } from "./time_series";
 import { TimeSeriesList } from "./time_series_list";
 
+const DEFAULT_COLORS = [
+  "red", "blue", "orange", "#3c3", "#c6c", "yellow"
+];
+
 // hint passed to xAxisLabelFormat, to indicate how broad the X range is right now
 export enum Scale {
   MINUTES = 0,
   DAYS = 1,
   YEARS = 2,
+}
+
+export interface HighlightConfig {
+  color: string;
+  opacity: number;
+  threshold: (timestamp: number, graph: SvgGraph) => boolean;
 }
 
 export interface SvgGraphConfig {
@@ -67,6 +77,8 @@ export interface SvgGraphConfig {
   xAxisLabelWidthPt: number;
   yAxisLabelWidthPt: number;
 
+  highlights: HighlightConfig[];
+
   // for drawing the lines on
   graphBackgroundColor: string;
   // primary and secondary colors for drawing grid lines
@@ -116,12 +128,13 @@ const DEFAULTS: SvgGraphConfig = {
   yAxisLabelFormat: toSI,
   xAxisLabelWidthPt: 5,  // gives a comfy padding to each side
   yAxisLabelWidthPt: 4,  // 4pt is usually enough for 6 chars
+  highlights: [],
   graphBackgroundColor: "#eeeeff",
   gridColor: "#555555",
   gridColor2: "#bbbbbb",
   labelColor: "#555555",
   legendColor: "#555555",
-  colors: [ "red", "blue", "orange", "#3c3", "#c6c", "yellow" ],
+  colors: DEFAULT_COLORS,
   padding: 20,
   innerPadding: 10,
   legendPadding: 5,
@@ -156,7 +169,7 @@ export class SvgGraph {
   legendBox: Box;
 
   cachedSvg?: ToXml[];
-  highlight?: GraphInstant;
+  focus?: GraphInstant;
 
   constructor(public lines: TimeSeriesList, public options: Partial<SvgGraphConfig> = {}) {
     this.config = Object.assign({}, DEFAULTS, options);
@@ -262,8 +275,8 @@ export class SvgGraph {
     return { timestamp, xOffset, xPercent, values: this.lines.list.map(ts => ts.interpolate(timestamp)) };
   }
 
-  setHighlight(instant?: GraphInstant) {
-    this.highlight = instant;
+  setFocus(instant?: GraphInstant) {
+    this.focus = instant;
   }
 
   draw(): string {
@@ -282,11 +295,15 @@ export class SvgGraph {
         elements.push(this.drawTitle(this.options.title));
       }
 
-      elements = elements.concat(
-        this.drawYLabels(yLines),
-        this.drawYLines(yLines),
-        this.drawXLabels(xLines),
-        this.drawXLines(xLines),
+      for (const h of this.config.highlights) {
+        elements.push(...this.drawHighlight(h));
+      }
+
+      elements.push(
+        ...this.drawYLabels(yLines),
+        ...this.drawYLines(yLines),
+        ...this.drawXLabels(xLines),
+        ...this.drawXLines(xLines),
       );
 
       this.lines.list.forEach((ts, i) => {
@@ -303,7 +320,7 @@ export class SvgGraph {
     }
 
     // build the actual SVG
-    return buildSvg(this.cachedSvg.concat(this.drawHighlight()), {
+    return buildSvg(this.cachedSvg.concat(this.drawFocus()), {
       viewWidth: this.config.viewWidth,
       viewHeight: this.viewHeight,
       pixelWidth: this.config.pixelWidth,
@@ -376,6 +393,34 @@ export class SvgGraph {
     });
   }
 
+  drawHighlight(h: HighlightConfig): ToXml[] {
+    let left: number | undefined;
+    let right = 0;
+    const spans: [ number, number ][] = [];
+    const rv: ToXml[] = [];
+
+    for (let ts = this.lines.minX; ts <= this.lines.maxX; ts += this.lines.interval) {
+      if (h.threshold(ts, this)) {
+        left = left ?? Math.max(this.xToPixel(ts - this.lines.interval / 2), this.graphBox.x);
+        right = Math.min(this.xToPixel(ts + this.lines.interval / 2), this.graphBox.x + this.graphBox.width);
+      } else if (left !== undefined) {
+        spans.push([ left, right ]);
+        left = undefined;
+      }
+    }
+    if (left !== undefined) spans.push([ left, right ]);
+
+    // draw boxes
+    return spans.map(([ left, right ]) => {
+      return new Rect({
+        x: left, y: this.graphBox.y, width: right - left, height: this.graphBox.height
+      }, {
+        fill: h.color,
+        opacity: h.opacity,
+      });
+    });
+  }
+
   drawTimeSeries(ts: TimeSeries, color: string): ToXml {
     const points = ts.toPoints().map(point => {
       return point.value == undefined ? undefined :
@@ -428,12 +473,12 @@ export class SvgGraph {
     return [ colorRect, text, clip ];
   }
 
-  drawHighlight(): ToXml[] {
-    if (!this.highlight) return [];
-    const x = this.xToPixel(this.highlight.timestamp);
+  drawFocus(): ToXml[] {
+    if (!this.focus) return [];
+    const x = this.xToPixel(this.focus.timestamp);
 
     const dots: Circle[] = [];
-    this.highlight.values.forEach((v, i) => {
+    this.focus.values.forEach((v, i) => {
       if (v === undefined) return;
       const color = this.config.colors[i % this.config.colors.length];
       const options = { fill: color, stroke: color, strokeWidth: 1 };

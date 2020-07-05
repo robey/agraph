@@ -1,5 +1,4 @@
 import * as fs from "fs";
-import * as luxon from "luxon";
 import { range } from "../arrays";
 import { buildSvgGraph, SvgGraphConfig } from "../svg_graph";
 import { TimeSeries } from "../time_series";
@@ -7,7 +6,6 @@ import { TimeSeriesList } from "../time_series_list";
 
 import "should";
 import "source-map-support/register";
-import { buildSvg } from "../svg";
 
 const SVG_HEADER = `<?xml version="1.0" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
@@ -53,5 +51,21 @@ describe("SVG graph", () => {
     const graph = buildSvgGraph(list, options);
     graph.should.match(/:150ms/);
     graph.should.match(/:30min/);
+  });
+
+  it("highlight zones", () => {
+    const errors = TimeSeries.fromArrays("errors", hour, [ 0, 0, 0, 0.5, 0, 0.1, 1, 0.9, 0, 0.4, 0.6, 0 ]);
+    const options: Partial<SvgGraphConfig> = {
+      backgroundColor: "white",
+      yAxisLabelFormat: n => `${n}ms`,
+      highlights: [
+        { color: "#ff8888", opacity: 0.3, threshold: ts => (errors.interpolate(ts) ?? 0) >= 0.5 },
+        { color: "#8888ff", opacity: 0.3, threshold: ts => {
+          return (errors.interpolate(ts) ?? 0) == 1 || (errors.interpolate(ts) ?? 0) == 0.1;
+        } },
+      ]
+    };
+    const graph1 = buildSvgGraph(list, options);
+    fs.readFileSync("./src/test/data/highlights.svg").toString().should.eql(graph1);
   });
 });

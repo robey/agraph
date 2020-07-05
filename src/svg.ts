@@ -64,6 +64,7 @@ export interface RectOptions {
   stroke?: string;
   strokeWidth?: number;
   fill?: string;
+  opacity?: number;
 }
 
 export class Rect implements ToXml {
@@ -76,6 +77,7 @@ export class Rect implements ToXml {
     if (this.options.stroke) fields.push(`stroke="${this.options.stroke}"`);
     if (this.options.strokeWidth) fields.push(`stroke-width="${this.options.strokeWidth}"`);
     if (this.options.fill) fields.push(`fill="${this.options.fill}"`);
+    if (this.options.opacity) fields.push(`opacity="${this.options.opacity}"`);
     const extra = fields.join(" ");
     return [
       `<rect x="${this.box.x}" y="${this.box.y}" width="${this.box.width}" height="${this.box.height}" ${extra}/>`
