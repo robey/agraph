@@ -68,4 +68,11 @@ describe("SVG graph", () => {
     const graph1 = buildSvgGraph(list, options);
     graph1.should.eql(fs.readFileSync("./src/test/data/highlights.svg").toString());
   });
+
+  it("maxY", () => {
+    const graph1 = buildSvgGraph(list, {
+      backgroundColor: "white", showLegend: false, maxY: 100, yAxisLabelWidthPt: 2
+    });
+    graph1.should.eql(fs.readFileSync("./src/test/data/clip-y.svg").toString());
+  });
 });

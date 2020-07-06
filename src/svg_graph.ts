@@ -35,6 +35,8 @@ export interface SvgGraphConfig {
 
   // force the graph to start at y = 0? (recommended)
   scaleToZero: boolean;
+  // set a max Y value too?
+  maxY?: number;
 
   // width of image, in millimeters:
   viewWidth: number;
@@ -182,7 +184,7 @@ export class SvgGraph {
     this.viewHeight = Math.round(this.config.viewWidth / this.config.aspectRatio);
 
     // find a good bounding box for the graph itself
-    this.top = ceilToPrecision(this.lines.maxY * 1.1, 2);
+    this.top = this.options.maxY ?? ceilToPrecision(this.lines.maxY * 1.1, 2);
     this.bottom = this.config.scaleToZero ? 0 : floorToPrecision(this.lines.minY, 2);
     this.left = this.lines.minX;
     this.right = this.lines.maxX;
@@ -290,6 +292,8 @@ export class SvgGraph {
       elements.push(new Rect(this.graphBox, {
         stroke: this.config.gridColor, strokeWidth: 1, fill: this.config.graphBackgroundColor
       }));
+      // draw the graph lines inside a clip box, in case the mandated y-limits are insufficient for the data
+      elements.push(new ClipPath("clip-graph-box", new Rect(this.graphBox)));
 
       if (this.options.title !== undefined) {
         elements.push(this.drawTitle(this.options.title));
@@ -442,6 +446,7 @@ export class SvgGraph {
       fill,
       fillOpacity: 0.5,
       closeLoop,
+      clipPath: "clip-graph-box",
     };
     return new Line(points, options);
   }

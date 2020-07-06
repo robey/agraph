@@ -2,6 +2,14 @@
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
 <svg width="120mm" height="68mm" viewBox="0 0 800 450" xmlns="http://www.w3.org/2000/svg" version="1.1">
   <desc>(none)</desc>
+  <defs>
+    <clipPath id="clip-graph-box"><rect x="110" y="20" width="670" height="280"/></clipPath>
+    <clipPath id="clip0"><rect x="135" y="355" width="290" height="25"/></clipPath>
+    <clipPath id="clip1"><rect x="135" y="380" width="290" height="25"/></clipPath>
+    <clipPath id="clip2"><rect x="135" y="405" width="290" height="25"/></clipPath>
+    <clipPath id="clip3"><rect x="470" y="355" width="290" height="25"/></clipPath>
+    <clipPath id="clip4"><rect x="470" y="380" width="290" height="25"/></clipPath>
+  </defs>
   <rect x="0" y="0" width="800" height="450" stroke="white" fill="white"/>
   <rect x="110" y="20" width="670" height="280" stroke="#555555" stroke-width="1" fill="#eeeeff"/>
   <rect x="262.27" y="20" width="60.91" height="280" fill="#ff8888" opacity="0.3"/>
@@ -25,24 +33,19 @@
   <path d="M 292.73 20 L 292.73 300" stroke="#555555" stroke-width="1" fill="none"/>
   <path d="M 475.45 20 L 475.45 300" stroke="#555555" stroke-width="1" fill="none"/>
   <path d="M 658.18 20 L 658.18 300" stroke="#555555" stroke-width="1" fill="none"/>
-  <path d="M 110 135.29 L 170.91 102.35 L 231.82 118.82 L 292.73 85.88 L 353.64 102.35 L 414.55 69.41 L 475.45 85.88 L 536.36 52.94 L 597.27 69.41 L 658.18 102.35 L 719.09 118.82 L 780 85.88" stroke="red" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" fill-opacity="0.5"/>
+  <path d="M 110 135.29 L 170.91 102.35 L 231.82 118.82 L 292.73 85.88 L 353.64 102.35 L 414.55 69.41 L 475.45 85.88 L 536.36 52.94 L 597.27 69.41 L 658.18 102.35 L 719.09 118.82 L 780 85.88" stroke="red" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" fill-opacity="0.5" clip-path="url(#clip-graph-box)"/>
   <rect x="110" y="360" width="15" height="15" stroke="#555555" stroke-width="1" fill="red"/>
   <text x="135" y="375" font-family="monospace" font-size="20" fill="#555555" clip-path="url(#clip0)">huey</text>
-  <clipPath id="clip0"><rect x="135" y="355" width="290" height="25"/></clipPath>
-  <path d="M 110 151.76 L 170.91 135.29 L 231.82 143.53 L 292.73 135.29 L 353.64 127.06 L 414.55 143.53 L 475.45 127.06 L 536.36 118.82 L 597.27 143.53 L 658.18 151.76 L 719.09 143.53 L 780 135.29" stroke="blue" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" fill-opacity="0.5"/>
+  <path d="M 110 151.76 L 170.91 135.29 L 231.82 143.53 L 292.73 135.29 L 353.64 127.06 L 414.55 143.53 L 475.45 127.06 L 536.36 118.82 L 597.27 143.53 L 658.18 151.76 L 719.09 143.53 L 780 135.29" stroke="blue" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" fill-opacity="0.5" clip-path="url(#clip-graph-box)"/>
   <rect x="110" y="385" width="15" height="15" stroke="#555555" stroke-width="1" fill="blue"/>
   <text x="135" y="400" font-family="monospace" font-size="20" fill="#555555" clip-path="url(#clip1)">dewey</text>
-  <clipPath id="clip1"><rect x="135" y="380" width="290" height="25"/></clipPath>
-  <path d="M 110 160 L 170.91 160 L 231.82 168.24 L 292.73 168.24 L 353.64 168.24 L 414.55 176.47 L 475.45 176.47 L 536.36 184.71 L 597.27 192.94 L 658.18 192.94 L 719.09 201.18 L 780 209.41" stroke="orange" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" fill-opacity="0.5"/>
+  <path d="M 110 160 L 170.91 160 L 231.82 168.24 L 292.73 168.24 L 353.64 168.24 L 414.55 176.47 L 475.45 176.47 L 536.36 184.71 L 597.27 192.94 L 658.18 192.94 L 719.09 201.18 L 780 209.41" stroke="orange" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" fill-opacity="0.5" clip-path="url(#clip-graph-box)"/>
   <rect x="110" y="410" width="15" height="15" stroke="#555555" stroke-width="1" fill="orange"/>
   <text x="135" y="425" font-family="monospace" font-size="20" fill="#555555" clip-path="url(#clip2)">louie</text>
-  <clipPath id="clip2"><rect x="135" y="405" width="290" height="25"/></clipPath>
-  <path d="M 110 217.65 L 170.91 201.18 L 231.82 184.71 L 292.73 176.47 L 353.64 168.24 L 414.55 160 L 475.45 151.76 L 536.36 135.29 L 597.27 118.82 L 658.18 110.59 L 719.09 94.12 L 780 77.65" stroke="#3c3" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" fill-opacity="0.5"/>
+  <path d="M 110 217.65 L 170.91 201.18 L 231.82 184.71 L 292.73 176.47 L 353.64 168.24 L 414.55 160 L 475.45 151.76 L 536.36 135.29 L 597.27 118.82 L 658.18 110.59 L 719.09 94.12 L 780 77.65" stroke="#3c3" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" fill-opacity="0.5" clip-path="url(#clip-graph-box)"/>
   <rect x="445" y="360" width="15" height="15" stroke="#555555" stroke-width="1" fill="#3c3"/>
   <text x="470" y="375" font-family="monospace" font-size="20" fill="#555555" clip-path="url(#clip3)">mickey</text>
-  <clipPath id="clip3"><rect x="470" y="355" width="290" height="25"/></clipPath>
-  <path d="M 110 250.59 L 170.91 250.59 L 231.82 242.35 L 292.73 250.59 L 353.64 250.59 L 414.55 242.35 L 475.45 250.59 L 536.36 250.59 L 597.27 242.35 L 658.18 250.59 L 719.09 250.59 L 780 242.35" stroke="#c6c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" fill-opacity="0.5"/>
+  <path d="M 110 250.59 L 170.91 250.59 L 231.82 242.35 L 292.73 250.59 L 353.64 250.59 L 414.55 242.35 L 475.45 250.59 L 536.36 250.59 L 597.27 242.35 L 658.18 250.59 L 719.09 250.59 L 780 242.35" stroke="#c6c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" fill-opacity="0.5" clip-path="url(#clip-graph-box)"/>
   <rect x="445" y="385" width="15" height="15" stroke="#555555" stroke-width="1" fill="#c6c"/>
   <text x="470" y="400" font-family="monospace" font-size="20" fill="#555555" clip-path="url(#clip4)">minnie</text>
-  <clipPath id="clip4"><rect x="470" y="380" width="290" height="25"/></clipPath>
 </svg>

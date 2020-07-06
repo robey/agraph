@@ -1,0 +1,34 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="120mm" height="68mm" viewBox="0 0 800 450" xmlns="http://www.w3.org/2000/svg" version="1.1">
+  <desc>(none)</desc>
+  <defs>
+    <clipPath id="clip-graph-box"><rect x="70" y="20" width="710" height="375"/></clipPath>
+  </defs>
+  <rect x="0" y="0" width="800" height="450" stroke="white" fill="white"/>
+  <rect x="70" y="20" width="710" height="375" stroke="#555555" stroke-width="1" fill="#eeeeff"/>
+  <text x="60" y="402" font-family="monospace" font-size="20" fill="#555555" text-anchor="end">0</text>
+  <text x="60" y="27" font-family="monospace" font-size="20" fill="#555555" text-anchor="end">100</text>
+  <text x="60" y="327" font-family="monospace" font-size="20" fill="#555555" text-anchor="end">20</text>
+  <text x="60" y="252" font-family="monospace" font-size="20" fill="#555555" text-anchor="end">40</text>
+  <text x="60" y="177" font-family="monospace" font-size="20" fill="#555555" text-anchor="end">60</text>
+  <text x="60" y="102" font-family="monospace" font-size="20" fill="#555555" text-anchor="end">80</text>
+  <path d="M 70 395 L 780 395" stroke="#555555" stroke-width="1" fill="none"/>
+  <path d="M 70 20 L 780 20" stroke="#555555" stroke-width="1" fill="none"/>
+  <path d="M 70 320 L 780 320" stroke="#555555" stroke-width="1" fill="none"/>
+  <path d="M 70 245 L 780 245" stroke="#555555" stroke-width="1" fill="none"/>
+  <path d="M 70 170 L 780 170" stroke="#555555" stroke-width="1" fill="none"/>
+  <path d="M 70 95 L 780 95" stroke="#555555" stroke-width="1" fill="none"/>
+  <text x="263.64" y="425" font-family="monospace" font-size="20" fill="#555555" text-anchor="middle">21:30</text>
+  <text x="457.27" y="425" font-family="monospace" font-size="20" fill="#555555" text-anchor="middle">21:45</text>
+  <text x="650.91" y="425" font-family="monospace" font-size="20" fill="#555555" text-anchor="middle">22:00</text>
+  <path d="M 70 20 L 70 395" stroke="#555555" stroke-width="1" fill="none"/>
+  <path d="M 263.64 20 L 263.64 395" stroke="#555555" stroke-width="1" fill="none"/>
+  <path d="M 457.27 20 L 457.27 395" stroke="#555555" stroke-width="1" fill="none"/>
+  <path d="M 650.91 20 L 650.91 395" stroke="#555555" stroke-width="1" fill="none"/>
+  <path d="M 70 20 L 134.55 -55 L 199.09 -17.5 L 263.64 -92.5 L 328.18 -55 L 392.73 -130 L 457.27 -92.5 L 521.82 -167.5 L 586.36 -130 L 650.91 -55 L 715.45 -17.5 L 780 -92.5" stroke="red" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" fill-opacity="0.5" clip-path="url(#clip-graph-box)"/>
+  <path d="M 70 57.5 L 134.55 20 L 199.09 38.75 L 263.64 20 L 328.18 1.25 L 392.73 38.75 L 457.27 1.25 L 521.82 -17.5 L 586.36 38.75 L 650.91 57.5 L 715.45 38.75 L 780 20" stroke="blue" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" fill-opacity="0.5" clip-path="url(#clip-graph-box)"/>
+  <path d="M 70 76.25 L 134.55 76.25 L 199.09 95 L 263.64 95 L 328.18 95 L 392.73 113.75 L 457.27 113.75 L 521.82 132.5 L 586.36 151.25 L 650.91 151.25 L 715.45 170 L 780 188.75" stroke="orange" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" fill-opacity="0.5" clip-path="url(#clip-graph-box)"/>
+  <path d="M 70 207.5 L 134.55 170 L 199.09 132.5 L 263.64 113.75 L 328.18 95 L 392.73 76.25 L 457.27 57.5 L 521.82 20 L 586.36 -17.5 L 650.91 -36.25 L 715.45 -73.75 L 780 -111.25" stroke="#3c3" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" fill-opacity="0.5" clip-path="url(#clip-graph-box)"/>
+  <path d="M 70 282.5 L 134.55 282.5 L 199.09 263.75 L 263.64 282.5 L 328.18 282.5 L 392.73 263.75 L 457.27 282.5 L 521.82 282.5 L 586.36 263.75 L 650.91 282.5 L 715.45 282.5 L 780 263.75" stroke="#c6c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" fill-opacity="0.5" clip-path="url(#clip-graph-box)"/>
+</svg>
