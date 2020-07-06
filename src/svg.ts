@@ -1,6 +1,8 @@
 // some very simple classes for generating SVG XML files.
 // XML! ugh!
 
+import { flatten } from "./arrays";
+
 const DEFAULT_VIEW_WIDTH = 100;
 const DEFAULT_VIEW_HEIGHT = 100;
 const DEFAULT_PIXEL_WIDTH = 800;
@@ -98,6 +100,7 @@ export interface LineOptions {
   fill?: string;
   fillOpacity?: number;
   closeLoop?: boolean;
+  clipPath?: string;
 }
 
 export class Line implements ToXml {
@@ -130,6 +133,7 @@ export class Line implements ToXml {
     if (this.options.strokeLineJoin) fields.push(`stroke-linejoin="${this.options.strokeLineJoin}"`);
     if (this.options.fill) fields.push(`fill="${this.options.fill}"`);
     if (this.options.fillOpacity !== undefined) fields.push(`fill-opacity="${round(this.options.fillOpacity)}"`);
+    if (this.options.clipPath) fields.push(`clip-path="url(#${this.options.clipPath})"`);
     return [ `<path d="${this.toPath()}" ${fields.join(" ")}/>` ];
   }
 }
@@ -183,7 +187,19 @@ class Compound implements ToXml {
   }
 
   toXml(indent: number): string[] {
-    return ([] as string[]).concat(...this.elements.map(item => item.toXml(indent + 1))).map(s => indented(indent, s));
+    return flatten(this.elements.map(item => item.toXml(indent + 1))).map(s => indented(indent, s));
+  }
+}
+
+class Defs implements ToXml {
+  content: ToXml;
+
+  constructor(public elements: ToXml[]) {
+    this.content = new Compound(elements);
+  }
+
+  toXml(indent: number): string[] {
+    return this.elements.length > 0 ? [ "<defs>", ...this.content.toXml(1), "</defs>" ] : [];
   }
 }
 
@@ -194,15 +210,19 @@ export function buildSvg(items: ToXml[], options: SvgOptions = {}): string {
   const pixelWidth = options.pixelWidth ?? DEFAULT_PIXEL_WIDTH;
   const pixelHeight = options.pixelHeight ?? DEFAULT_PIXEL_HEIGHT;
   const description = options.description ?? DEFAULT_DESCRIPTION;
-  const content = new Compound(items);
 
+  // clip paths need to be in a special "defs" block, or some renderers will shit themselves.
+  const defs = new Defs(items.filter(x => x instanceof ClipPath));
+
+  const background: ToXml[] = [];
   if (options.backgroundColor) {
-    const rect = new Rect(
+    background.push(new Rect(
       { x: 0, y: 0, width: pixelWidth, height: pixelHeight },
       { stroke: options.backgroundColor, fill: options.backgroundColor }
-    );
-    content.elements.unshift(rect);
+    ));
   }
+
+  const content = new Compound([ defs, ...background, ...items.filter(x => !(x instanceof ClipPath)) ]);
 
   return `<?xml version="1.0" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
