@@ -100,7 +100,7 @@ describe("SVG", () => {
   it("clip path", () => {
     const path = new ClipPath("foo", new Rect({ x: 1, y: 2, width: 3, height: 4 }));
     buildSvg([ path ]).should.eql(
-      SVG_HEADER + `  <clipPath id="foo"><rect x="1" y="2" width="3" height="4" /></clipPath>\n` + SVG_FOOTER
+      SVG_HEADER + `  <clipPath id="foo"><rect x="1" y="2" width="3" height="4"/></clipPath>\n` + SVG_FOOTER
     );
   });
 });

@@ -50,11 +50,11 @@ export class Circle implements ToXml {
   toXml(indent: number): string[] {
     const fields: string[] = [];
     if (this.options.stroke) fields.push(`stroke="${this.options.stroke}"`);
-    if (this.options.strokeWidth) fields.push(`stroke-width="${this.options.strokeWidth}"`);
+    if (this.options.strokeWidth) fields.push(`stroke-width="${round(this.options.strokeWidth)}"`);
     if (this.options.fill) fields.push(`fill="${this.options.fill}"`);
     const extra = fields.join(" ");
     return [
-      `<circle cx="${this.center.x}" cy="${this.center.y}" r="${this.radius}" ${extra}/>`
+      `<circle cx="${round(this.center.x)}" cy="${round(this.center.y)}" r="${round(this.radius)}" ${extra}/>`
     ];
   }
 }
@@ -73,14 +73,18 @@ export class Rect implements ToXml {
   }
 
   toXml(indent: number): string[] {
-    const fields: string[] = [];
+    const fields: string[] = [
+      `x="${round(this.box.x)}"`,
+      `y="${round(this.box.y)}"`,
+      `width="${round(this.box.width)}"`,
+      `height="${round(this.box.height)}"`,
+    ];
     if (this.options.stroke) fields.push(`stroke="${this.options.stroke}"`);
-    if (this.options.strokeWidth) fields.push(`stroke-width="${this.options.strokeWidth}"`);
+    if (this.options.strokeWidth) fields.push(`stroke-width="${round(this.options.strokeWidth)}"`);
     if (this.options.fill) fields.push(`fill="${this.options.fill}"`);
-    if (this.options.opacity) fields.push(`opacity="${this.options.opacity}"`);
-    const extra = fields.join(" ");
+    if (this.options.opacity) fields.push(`opacity="${round(this.options.opacity)}"`);
     return [
-      `<rect x="${this.box.x}" y="${this.box.y}" width="${this.box.width}" height="${this.box.height}" ${extra}/>`
+      `<rect ${fields.join(" ")}/>`
     ];
   }
 }
@@ -109,7 +113,7 @@ export class Line implements ToXml {
         discontinuity = true;
       } else {
         const command = discontinuity ? "M" : "L";
-        path += `${command} ${Math.round(point.x)} ${Math.round(point.y)} `;
+        path += `${command} ${round(point.x)} ${round(point.y)} `;
         discontinuity = false;
       }
     }
@@ -121,11 +125,11 @@ export class Line implements ToXml {
   toXml(indent: number): string[] {
     const fields: string[] = [];
     if (this.options.stroke) fields.push(`stroke="${this.options.stroke}"`);
-    if (this.options.strokeWidth) fields.push(`stroke-width="${this.options.strokeWidth}"`);
+    if (this.options.strokeWidth) fields.push(`stroke-width="${round(this.options.strokeWidth)}"`);
     if (this.options.strokeLineCap) fields.push(`stroke-linecap="${this.options.strokeLineCap}"`);
     if (this.options.strokeLineJoin) fields.push(`stroke-linejoin="${this.options.strokeLineJoin}"`);
     if (this.options.fill) fields.push(`fill="${this.options.fill}"`);
-    if (this.options.fillOpacity !== undefined) fields.push(`fill-opacity="${this.options.fillOpacity}"`);
+    if (this.options.fillOpacity !== undefined) fields.push(`fill-opacity="${round(this.options.fillOpacity)}"`);
     return [ `<path d="${this.toPath()}" ${fields.join(" ")}/>` ];
   }
 }
@@ -148,12 +152,14 @@ export class Text implements ToXml {
   toXml(indent: number): string[] {
     const fields: string[] = [];
     if (this.options.fontFamily) fields.push(`font-family="${this.options.fontFamily}"`);
-    if (this.options.fontSize) fields.push(`font-size="${this.options.fontSize}"`);
+    if (this.options.fontSize) fields.push(`font-size="${round(this.options.fontSize)}"`);
     if (this.options.fontWeight) fields.push(`font-weight="${this.options.fontWeight}"`);
     if (this.options.fill) fields.push(`fill="${this.options.fill}"`);
     if (this.options.textAnchor) fields.push(`text-anchor="${this.options.textAnchor}"`);
     if (this.options.clipPath) fields.push(`clip-path="url(#${this.options.clipPath})"`);
-    return [ `<text x="${this.location.x}" y="${this.location.y}" ${fields.join(" ")}>${this.text}</text>` ];
+    return [
+      `<text x="${round(this.location.x)}" y="${round(this.location.y)}" ${fields.join(" ")}>${this.text}</text>`
+    ];
   }
 }
 
@@ -210,4 +216,9 @@ ${content.toXml(1).join("\n")}
 const SPACES = "                                        ";
 function indented(level: number, s: string): string {
   return SPACES.slice(0, level * 2) + s;
+}
+
+// found a number to the nearest hundredth and stringify, so it's not unwieldy in text
+function round(n: number): string {
+  return (Math.round(n * 100) / 100).toString();
 }

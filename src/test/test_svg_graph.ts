@@ -33,13 +33,13 @@ describe("SVG graph", () => {
 
   it("simple graph with legend/fill", () => {
     const graph1 = buildSvgGraph(list, { title: "hello", backgroundColor: "#f8f8ff", showLegend: false, fill: false, timezone });
-    fs.readFileSync("./src/test/data/simple1.svg").toString().should.eql(graph1);
+    graph1.should.eql(fs.readFileSync("./src/test/data/simple1.svg").toString());
     const graph2 = buildSvgGraph(list, { title: "hello", backgroundColor: "#f8f8ff", showLegend: false, fill: true, timezone });
-    fs.readFileSync("./src/test/data/simple1-fill.svg").toString().should.eql(graph2);
+    graph2.should.eql(fs.readFileSync("./src/test/data/simple1-fill.svg").toString());
     const graph3 = buildSvgGraph(list, { title: "hello", backgroundColor: "#f8f8ff", showLegend: true, fill: false, timezone });
-    fs.readFileSync("./src/test/data/simple1-legend.svg").toString().should.eql(graph3);
+    graph3.should.eql(fs.readFileSync("./src/test/data/simple1-legend.svg").toString());
     const graph4 = buildSvgGraph(list, { title: "hello", backgroundColor: "#f8f8ff", showLegend: true, fill: true, timezone });
-    fs.readFileSync("./src/test/data/simple1-legend-fill.svg").toString().should.eql(graph4);
+    graph4.should.eql(fs.readFileSync("./src/test/data/simple1-legend-fill.svg").toString());
   });
 
   it("custom axis labels", () => {
@@ -66,6 +66,6 @@ describe("SVG graph", () => {
       ]
     };
     const graph1 = buildSvgGraph(list, options);
-    fs.readFileSync("./src/test/data/highlights.svg").toString().should.eql(graph1);
+    graph1.should.eql(fs.readFileSync("./src/test/data/highlights.svg").toString());
   });
 });
