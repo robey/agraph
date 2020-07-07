@@ -37,6 +37,9 @@ export interface SvgGraphConfig {
   scaleToZero: boolean;
   // set a max Y value too?
   maxY?: number;
+  // display a label on the top/bottom of the graph?
+  showTopYLabel: boolean;
+  showBottomYLabel: boolean;
 
   // width of image, in millimeters:
   viewWidth: number;
@@ -104,6 +107,8 @@ export interface SvgGraphConfig {
 const DEFAULTS: SvgGraphConfig = {
   showLegend: true,
   scaleToZero: true,
+  showTopYLabel: true,
+  showBottomYLabel: true,
   viewWidth: 120,
   pixelWidth: 800,
   aspectRatio: 16 / 9,
@@ -370,15 +375,15 @@ export class SvgGraph {
   }
 
   drawXLabels(lines: number[]): ToXml[] {
-    let scale = this.lines.interval >= YEAR ? Scale.YEARS : (this.lines.interval >= DAY ? Scale.DAYS : Scale.MINUTES);
+    const interval = lines[1] - lines[0];
+    let scale = interval >= YEAR ? Scale.YEARS : (interval >= DAY ? Scale.DAYS : Scale.MINUTES);
     const options = {
       fontFamily: this.config.font, fontSize: this.config.fontSize, fill: this.config.labelColor, textAnchor: "middle"
     };
     const margin = this.config.xAxisLabelWidthPt * this.config.fontSize / 2;
 
     return lines.filter(t => {
-      const x = this.xToPixel(t);
-      return x >= this.xLabelBox.x + margin && x <= this.xLabelBox.x + this.xLabelBox.width - margin;
+      return this.config.showBottomYLabel ? (this.xToPixel(t) >= this.xLabelBox.x + margin) : true;
     }).map(x => {
       const px = this.xToPixel(x);
       const py = this.xLabelBox.y + this.config.fontSize;
@@ -511,7 +516,10 @@ export class SvgGraph {
     if (this.config.yLines == 0) return [];
     const interval = ceilToCurrency((this.top - this.bottom) / this.config.yLines);
     const yBase = floorToPrecision(this.bottom, 1);
-    return [ this.bottom, this.top ].concat(
+    const lines: number[] = [];
+    if (this.config.showBottomYLabel) lines.push(this.bottom);
+    if (this.config.showTopYLabel) lines.push(this.top);
+    return lines.concat(
       range(0, this.config.yLines).map(i => yBase + (i + 1) * interval).filter(y => y > this.bottom && y < this.top)
     );
   }
