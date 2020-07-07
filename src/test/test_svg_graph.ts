@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import { range } from "../arrays";
+import { RrdFile } from "../rrd";
 import { buildSvgGraph, SvgGraphConfig } from "../svg_graph";
 import { TimeSeries } from "../time_series";
 import { TimeSeriesList } from "../time_series_list";
@@ -74,5 +75,28 @@ describe("SVG graph", () => {
       backgroundColor: "white", showLegend: false, maxY: 100, yAxisLabelWidthPt: 2
     });
     graph1.should.eql(fs.readFileSync("./src/test/data/clip-y.svg").toString());
+  });
+
+  it("dense graph from RRD", () => {
+    const rrdData = fs.readFileSync("./src/test/data/ping-2020.rrd");
+    const rrd = new RrdFile(new DataView(rrdData.buffer));
+
+    // const startTime = 1593995240 - 60;
+    const startTime = 1593478180 - 60;
+    const endTime = 1594082510;
+    const list = new TimeSeriesList([ rrd.getTimeSeries("value:MAX", startTime, endTime) ]);
+
+    const options: Partial<SvgGraphConfig> = {
+      backgroundColor: "white",
+      yAxisLabelFormat: n => `${n}ms`,
+      showLegend: false,
+      aspectRatio: 2.5125,
+      padding: 0,
+      fontSize: 18,
+      showTopYLabel: false,
+    };
+
+    const graph1 = buildSvgGraph(list, options);
+    graph1.should.eql(fs.readFileSync("./src/test/data/dense-rrd.svg").toString());
   });
 });
