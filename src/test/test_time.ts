@@ -47,6 +47,9 @@ describe("TimeBuddy", () => {
       t.timeGranularityFor(1593991430, 1593991430 + 86000, 6).should.eql(
         range(1594004400, 1593991430 + 86000, 4 * HOUR)
       );
+      t.timeGranularityFor(1593478180, 1594082510, 7).should.eql(
+        range(1593500400, 1594082510, 24 * HOUR)
+      );
     });
 
     it("weeks", () => {
