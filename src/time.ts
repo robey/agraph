@@ -55,17 +55,17 @@ const INTERVALS: IntervalMath[] = [
   },
   {
     interval: 4 * HOUR,
-    start: d => d.plus({ hour: modCeil(d.hour, 4) }),
+    start: d => nextHour(d, h => modCeil(h, 4)),
     next: d => d.hour < 20 ? d.set({ hour: d.hour + 4 }) : d.plus({ day: 1 }).startOf("day"),
   },
   {
     interval: 12 * HOUR,
-    start: d => d.plus({ hour: modCeil(d.hour, 12) }),
+    start: d => nextHour(d, h => modCeil(h, 12)),
     next: d => d.hour == 0 ? d.set({ hour: 12 }) : d.plus({ day: 1 }).startOf("day"),
   },
   {
     interval: DAY,
-    start: d => d.plus({ hour: modCeil(d.hour, 24) }),
+    start: d => nextHour(d, h => modCeil(h, 24)),
     next: d => d.plus({ day: 1 }),
   },
   {
@@ -93,6 +93,11 @@ const INTERVALS: IntervalMath[] = [
 function modCeil(n: number, factor: number): number {
   const r = n % factor;
   return r == 0 ? 0 : factor - r;
+}
+
+function nextHour(d: luxon.DateTime, f: (hour: number) => number): luxon.DateTime {
+  const top = d.plus({ second: modCeil(d.toSeconds(), HOUR) });
+  return top.plus({ hour: f(top.hour) });
 }
 
 function nextMonday(d: luxon.DateTime): luxon.DateTime {

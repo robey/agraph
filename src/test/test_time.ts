@@ -42,6 +42,11 @@ describe("TimeBuddy", () => {
       t.timeGranularityFor(midnight - HOUR, midnight + 3 * DAY, 5).should.eql(
         range(midnight, midnight + 3 * DAY + 1, DAY)
       );
+
+      // round hours up from a random time correctly
+      t.timeGranularityFor(1593991430, 1593991430 + 86000, 6).should.eql(
+        range(1594004400, 1593991430 + 86000, 4 * HOUR)
+      );
     });
 
     it("weeks", () => {
