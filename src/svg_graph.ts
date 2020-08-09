@@ -235,6 +235,10 @@ export class SvgGraph {
     };
   }
 
+  formatTimestamp(timestamp: number, format: string): string {
+    return luxon.DateTime.fromSeconds(timestamp, { zone: this.config.timezone }).toFormat(format);
+  }
+
   /*
    * return the borders of the actual graph within the SVG, as fractions of
    * the overall SVG size. all numbers will be between 0 and 1.

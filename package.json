@@ -20,7 +20,7 @@
     "clean": "rm -rf lib",
     "distclean": "npm run clean && rm -rf node_modules",
     "test": "npm run build && mocha -R spec --colors --recursive lib/test",
-    "webpack": "webpack-cli --display-error-details --env.NODE_ENV=production"
+    "webpack": "webpack-cli --display-error-details --display-modules --env.NODE_ENV=production"
   },
   "dependencies": {
     "display-si": "^1.0.3",
