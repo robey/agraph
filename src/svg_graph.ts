@@ -3,20 +3,10 @@ import * as luxon from "luxon";
 
 import { range } from "./arrays";
 import { Box, buildSvg, Circle, ClipPath, Line, Rect, Text, ToXml } from "./svg";
-import { DAY, TimeBuddy, YEAR } from "./time";
+import { DEFAULT_COLORS } from "./themes";
+import { DAY, defaultTimeLabel, TimeBuddy, TimeScale, YEAR } from "./time";
 import { TimeSeries } from "./time_series";
 import { TimeSeriesList } from "./time_series_list";
-
-const DEFAULT_COLORS = [
-  "red", "blue", "orange", "#3c3", "#c6c", "yellow"
-];
-
-// hint passed to xAxisLabelFormat, to indicate how broad the X range is right now
-export enum Scale {
-  MINUTES = 0,
-  DAYS = 1,
-  YEARS = 2,
-}
 
 export interface HighlightConfig {
   color: string;
@@ -77,7 +67,7 @@ export interface SvgGraphConfig {
   titleColor: string;
 
   // customize the x-axis or y-axis labels? and how wide (in points) to allow for them?
-  xAxisLabelFormat: (time: luxon.DateTime, scale: Scale) => string;
+  xAxisLabelFormat: (time: luxon.DateTime, scale: TimeScale) => string;
   yAxisLabelFormat: (n: number) => string;
   xAxisLabelWidthPt: number;
   yAxisLabelWidthPt: number;
@@ -122,16 +112,7 @@ const DEFAULTS: SvgGraphConfig = {
   titleFontSize: 24,
   titleFontWeight: "bold",
   titleColor: "#660099",
-  xAxisLabelFormat: (time: luxon.DateTime, scale: Scale) => {
-    switch (scale) {
-      case Scale.YEARS:
-        return time.year.toString();
-      case Scale.DAYS:
-        return `${time.month}/${zpad(time.day)}`;
-      default:
-        return `${time.hour}:${zpad(time.minute)}`;
-    }
-  },
+  xAxisLabelFormat: defaultTimeLabel,
   yAxisLabelFormat: toSI,
   xAxisLabelWidthPt: 5,  // gives a comfy padding to each side
   yAxisLabelWidthPt: 4,  // 4pt is usually enough for 6 chars
@@ -380,7 +361,7 @@ export class SvgGraph {
 
   drawXLabels(lines: number[]): ToXml[] {
     const interval = lines[1] - lines[0];
-    let scale = interval >= YEAR ? Scale.YEARS : (interval >= DAY ? Scale.DAYS : Scale.MINUTES);
+    let scale = interval >= YEAR ? TimeScale.YEARS : (interval >= DAY ? TimeScale.DAYS : TimeScale.MINUTES);
     const options = {
       fontFamily: this.config.font, fontSize: this.config.fontSize, fill: this.config.labelColor, textAnchor: "middle"
     };
@@ -536,9 +517,4 @@ export class SvgGraph {
     const count = Math.floor(this.graphBox.width / gap);
     return new TimeBuddy(this.options.timezone).timeGranularityFor(this.left, this.right, count);
   }
-}
-
-
-function zpad(n: number): string {
-  return ("00" + n.toString()).slice(-2);
 }

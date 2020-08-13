@@ -2,6 +2,13 @@ import { ceilToCurrency } from "display-si";
 import * as luxon from "luxon";
 import { generate } from "./arrays";
 
+// hint passed to xAxisLabelFormat, to indicate how broad the X range is right now
+export enum TimeScale {
+  MINUTES = 0,
+  DAYS = 1,
+  YEARS = 2,
+}
+
 export const MINUTE = 60;
 export const HOUR = 60 * MINUTE;
 export const DAY = 24 * HOUR;
@@ -177,4 +184,19 @@ export class TimeBuddy {
       multiple = ceilToCurrency(multiple * 2);
     }
   }
+}
+
+export function defaultTimeLabel(time: luxon.DateTime, scale: TimeScale) {
+  switch (scale) {
+    case TimeScale.YEARS:
+      return time.year.toString();
+    case TimeScale.DAYS:
+      return `${time.month}/${zpad(time.day)}`;
+    default:
+      return `${time.hour}:${zpad(time.minute)}`;
+  }
+}
+
+function zpad(n: number): string {
+  return ("00" + n.toString()).slice(-2);
 }

@@ -23,6 +23,7 @@
     "webpack": "webpack-cli --display-error-details --display-modules --env.NODE_ENV=production"
   },
   "dependencies": {
+    "antsy": "^2.0.0",
     "display-si": "^1.0.3",
     "luxon": "^1.24.1"
   },
@@ -30,12 +31,13 @@
     "@types/luxon": "^1.24.0",
     "@types/mocha": "^7.0.2",
     "@types/node": "^14.0.11",
+    "@types/source-map-support": "^0.5.2",
     "mocha": "^7.2.0",
     "should": "^13.2.3",
     "source-map-support": "^0.5.19",
     "ts-loader": "^7.0.5",
     "typescript": "^3.9.3",
-    "webpack": "^4.43.0",
+    "webpack": "^4.44.1",
     "webpack-cli": "^3.3.11"
   },
   "main": "./lib/yeri.js",
