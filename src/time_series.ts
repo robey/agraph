@@ -139,54 +139,65 @@ export class TimeSeries {
     return TimeSeries.fromArrays(this.name, ts, v);
   }
 
+  /*
+   * "draw" the timeseries into a pixelated area of `width` by `height` cells.
+   * returns two different `width * height` maps of the timeseries graph:
+   *   - `widthPercent`: how much (0 - 1) of a cell's width contains the line?
+   *   - `fillPercent`: how much (0 - 1) of a cell's volume falls below the
+   *     line?
+   */
   antialias(
     width: number,
     height: number,
     top: number = this.max(),
     bottom: number = 0,
-    left?: number,
-    right?: number,
+    leftLimit?: number,
+    rightLimit?: number,
   ): CellData {
     this.sort();
-    const ts = this.timestamps.slice();
-    const v = this.values.slice();
-    if (left === undefined) left = ts[0];
-    if (right === undefined) right = ts[ts.length - 1];
+    const left = leftLimit ?? this.timestamps[0];
+    const right = rightLimit ?? this.timestamps[this.timestamps.length - 1];
     const cellWidth = (right - left) / width;
     const cellHeight = (top - bottom) / height;
 
-    // first, interpolate the value at every vertical border.
+    const tToX = (t: number) => (t - left) / cellWidth;
+    const vToY = (v: MaybeNumber) => v === undefined ? undefined : (v - bottom) / cellHeight;
+    const xToT = (x: number) => x * cellWidth + left;
+
+    // scale all timestamps and values to be in cell coordinates
+    const xPoints = this.timestamps.map(tToX);
+    const yPoints = this.values.map(vToY);
+
+    // first, interpolate the value at every x-dimension cell border.
     let i = 0;
-    for (const t of range(left, right, cellWidth)) {
-      while (ts[i] < t && i < ts.length) i++;
-      if (i < ts.length && ts[i] == t) continue;
-      ts.splice(i, 0, t);
-      v.splice(i, 0, this.interpolate(t));
+    for (const x of range(0, width)) {
+      while (xPoints[i] < x && i < xPoints.length) i++;
+      if (i < xPoints.length && xPoints[i] == x) continue;
+      xPoints.splice(i, 0, x);
+      yPoints.splice(i, 0, vToY(this.interpolate(xToT(x))));
     }
 
-    // next, interpolate any horizontal border crossing.
-    let cell: MaybeNumber = undefined;
-    for (let i = 0; i < ts.length; i++) {
-      if (v[i] === undefined) {
-        cell = undefined;
-        continue;
-      }
-      const iCell = Math.floor(((v[i] ?? 0) - bottom) / cellHeight);
-      if (iCell == cell) continue;
-      if (cell === undefined) {
-        cell = iCell;
+    // next, interpolate any y-dimension cell border.
+    let yLeft: MaybeNumber = undefined;
+    let prevCell: MaybeNumber = undefined;
+    for (let i = 0; i < xPoints.length; i++) {
+      // skip if the prev or current y was missing, or they're the same.
+      const y = yPoints[i], cell = floor(y ?? 0);
+      if (y === undefined || yLeft === undefined || prevCell === undefined || prevCell == cell) {
+        yLeft = y;
+        prevCell = cell;
         continue;
       }
 
       // we crossed at least one cell.
-      const direction = cell < iCell ? 1 : -1;
-      cell += direction;
-      const iv = (cell + (direction == 1 ? 0 : 1)) * cellHeight + bottom;
-      if (iv == v[i]) continue;
+      const direction = prevCell < cell ? 1 : -1;
+      prevCell += direction;
+      const border = prevCell + (direction == 1 ? 0 : 1);
+      if (border == y) continue;  // don't "interpolate" an existing perfect crossing
+      const x = linearInterpolate(yLeft, y, xPoints[i - 1], xPoints[i], border);
 
-      const it = linearInterpolate(v[i - 1] ?? 0, v[i] ?? 0, ts[i - 1], ts[i], iv);
-      ts.splice(i, 0, it);
-      v.splice(i, 0, iv);
+      xPoints.splice(i, 0, x);
+      yPoints.splice(i, 0, border);
     }
 
     // at this point, ts and v contain line segments that are each constrained to one cell.
@@ -195,18 +206,18 @@ export class TimeSeries {
     widthPercent.fill(0);
     fillPercent.fill(0);
 
-    for (let i = 1; i < ts.length; i++) {
-      const v1 = v[i - 1], v2 = v[i];
-      if (v1 === undefined || v2 === undefined) continue;
-      const x = floor((ts[i - 1] - left) / cellWidth);
-      const y = floor((Math.min(v1, v2) - bottom) / cellHeight);
-      const yReal = height - y - 1;
+    for (const i of range(1, xPoints.length)) {
+      const x1 = xPoints[i - 1], x2 = xPoints[i], y1 = yPoints[i - 1], y2 = yPoints[i];
+      if (y1 === undefined || y2 === undefined) continue;
+      const yCell = floor(Math.min(y1, y2));
+      const yReal = height - yCell - 1;
+      const xCell = floor(x1);
 
-      const segmentPercent = (ts[i] - ts[i - 1]) / cellWidth;
-      const areaPercent = ((v1 - (y * cellHeight)) + (v2 - (y * cellHeight))) / 2 / cellHeight * segmentPercent;
-      widthPercent[yReal * width + x] += segmentPercent;
-      fillPercent[yReal * width + x] += areaPercent;
-      for (const yy of range(yReal + 1, height)) fillPercent[yy * width + x] += segmentPercent;
+      const segmentPercent = x2 - x1;
+      const areaPercent = (((y1 + y2) / 2) - yCell) * segmentPercent;
+      widthPercent[yReal * width + xCell] += segmentPercent;
+      fillPercent[yReal * width + xCell] += areaPercent;
+      for (const yy of range(yReal + 1, height)) fillPercent[yy * width + xCell] += segmentPercent;
     }
 
     return {
