@@ -1,5 +1,6 @@
 import * as antsy from "antsy";
-import { range } from "./arrays";
+
+const THIRD = 1 / 3;
 
 // color manipulation, for the ansi graphs
 export class RGB {
@@ -40,54 +41,18 @@ export class RGB {
   blend(other: RGB, alpha: number): RGB {
     const nalpha = 1 - alpha;
     return new RGB(
-      Math.round(Math.pow(Math.pow(this.red, 2.2) * alpha + Math.pow(other.red, 2.2) * nalpha, 1/2.2)),
-      Math.round(Math.pow(Math.pow(this.green, 2.2) * alpha + Math.pow(other.green, 2.2) * nalpha, 1/2.2)),
-      Math.round(Math.pow(Math.pow(this.blue, 2.2) * alpha + Math.pow(other.blue, 2.2) * nalpha, 1/2.2)),
+      Math.ceil(this.red * alpha + other.red * nalpha),
+      Math.ceil(this.green * alpha + other.green * nalpha),
+      Math.ceil(this.blue * alpha + other.blue * nalpha),
     );
   }
 
   mix3(c1: RGB, c2: RGB): RGB {
     return new RGB(
-      Math.round(Math.pow(Math.pow(this.red, 2.2) * 1/3 + Math.pow(c1.red, 2.2) * 1/3 + Math.pow(c2.red, 2) * 1/3, 1/2.2)),
-      Math.round(Math.pow(Math.pow(this.green, 2.2) * 1/3 + Math.pow(c1.green, 2.2) * 1/3 + Math.pow(c2.green, 2) * 1/3, 1/2.2)),
-      Math.round(Math.pow(Math.pow(this.blue, 2.2) * 1/3 + Math.pow(c1.blue, 2.2) * 1/3 + Math.pow(c2.blue, 2) * 1/3, 1/2.2)),
+      Math.round(this.red * THIRD + c1.red * THIRD + c2.red * THIRD),
+      Math.round(this.green * THIRD + c1.green * THIRD + c2.green * THIRD),
+      Math.round(this.blue * THIRD + c1.blue * THIRD + c2.blue * THIRD),
     );
-  }
-
-  blendY(other: RGB, alpha: number): RGB {
-    const nalpha = 1 - alpha;
-    const luma = this.approximateLuma() * alpha + other.approximateLuma() * nalpha;
-    return new RGB(
-      Math.ceil(this.red * alpha + other.red * nalpha),
-      Math.ceil(this.green * alpha + other.green * nalpha),
-      Math.ceil(this.blue * alpha + other.blue * nalpha),
-    ).correctLuma(luma);
-  }
-
-  blendx(other: RGB, alpha: number): RGB {
-    const nalpha = 1 - alpha;
-    return new RGB(
-      Math.ceil(this.red * alpha + other.red * nalpha),
-      Math.ceil(this.green * alpha + other.green * nalpha),
-      Math.ceil(this.blue * alpha + other.blue * nalpha),
-    );
-  }
-
-  mix3x(c1: RGB, c2: RGB): RGB {
-    return new RGB(
-      Math.round(this.red * 1/3 + c1.red * 1/3 + c2.red * 1/3),
-      Math.round(this.green * 1/3 + c1.green * 1/3 + c2.green * 1/3),
-      Math.round(this.blue * 1/3 + c1.blue * 1/3 + c2.blue * 1/3),
-    );
-  }
-
-  mix3y(c1: RGB, c2: RGB): RGB {
-    const luma = this.approximateLuma() * 1/3 + c1.approximateLuma() * 1/3 + c2.approximateLuma() * 1/3;
-    return new RGB(
-      Math.round(this.red * 1/3 + c1.red * 1/3 + c2.red * 1/3),
-      Math.round(this.green * 1/3 + c1.green * 1/3 + c2.green * 1/3),
-      Math.round(this.blue * 1/3 + c1.blue * 1/3 + c2.blue * 1/3),
-    ).correctLuma(luma);
   }
 
   distance(other: RGB): number {
@@ -121,10 +86,8 @@ export function quantize4to2(colors: RGB[]): RGB[] {
     triplet = [ merge[0][0], merge[0][1], merge[1][0] ];
   } else {
     // two pairs
-    const c1 = colors[merge[0][0]].blendY(colors[merge[0][1]], 0.5);
-    const c2 = colors[merge[1][0]].blendY(colors[merge[1][1]], 0.5);
-    if (c1.number() != colors[merge[0][0]].number()) console.log(`merge ${rv[merge[0][0]].toHex()} + ${rv[merge[0][1]].toHex()} = ${c1.toHex()}`);
-    if (c2.number() != colors[merge[1][0]].number()) console.log(`merge ${rv[merge[1][0]].toHex()} + ${rv[merge[1][1]].toHex()} = ${c2.toHex()}`);
+    const c1 = colors[merge[0][0]].blend(colors[merge[0][1]], 0.5);
+    const c2 = colors[merge[1][0]].blend(colors[merge[1][1]], 0.5);
     rv[merge[0][0]] = rv[merge[0][1]] = c1;
     rv[merge[1][0]] = rv[merge[1][1]] = c2;
     return rv;
