@@ -3,6 +3,7 @@ import { floorToPrecision, ceilToPrecision, toSI, ceilToCurrency } from "display
 import * as luxon from "luxon";
 
 import { range } from "./arrays";
+import { RGB, quantize4to2 } from "./rgb";
 import { DEFAULT_COLORS } from "./themes";
 import { DAY, defaultTimeLabel, TimeBuddy, TimeScale, YEAR } from "./time";
 import { TimeSeries } from "./time_series";
@@ -56,6 +57,11 @@ export interface AnsiGraphConfig {
   legendColor: string;
   // color for lines
   colors: string[];
+
+  // padding between major boxes, in characters
+  padding: number;
+  // extra space on either side of the image, in characters
+  sideMargin: number;
 }
 
 const DEFAULTS: AnsiGraphConfig = {
@@ -80,6 +86,8 @@ const DEFAULTS: AnsiGraphConfig = {
   labelColor: "#555555",
   legendColor: "#555555",
   colors: DEFAULT_COLORS,
+  padding: 1,
+  sideMargin: 1,
 };
 
 const CH_V = "\u2502";
@@ -88,6 +96,14 @@ const CH_H = "\u2500";
 const CH_LB = "\u2514";
 // uprightdown: "\u251c",
 const CH_B = "\u2534";
+
+// top, bottom
+const CH_HALF = [ "\u2580", "\u2584" ];
+// 16 possibilities for a 2x2, in order of UL UR LL LR
+const CH_QUARTER = [
+  " ", "\u2597", "\u2596", "\u2584", "\u259d", "\u2590", "\u259e", "\u259f",
+  "\u2598", "\u259a", "\u258c", "\u2599", "\u2580", "\u259c", "\u259b", "\u2588",
+];
 
 export function buildAnsiGraph(lines: TimeSeriesList, options: Partial<AnsiGraphConfig> = {}): string {
   return new AnsiGraph(lines, options).draw();
@@ -124,10 +140,10 @@ export class AnsiGraph {
      *   - below it: the X axis labels, and optionally a legend
      */
     const legendLines = this.config.showLegend ? Math.ceil(this.lines.list.length / 2) : 0;
-    this.graphX = this.config.yAxisLabelWidth + 1;
-    this.graphY = (this.config.title !== undefined) ? 1 : 0;
-    this.graphWidth = this.config.width - this.graphX;
-    this.graphHeight = this.config.height - legendLines - 2 /* x labels, line */ - this.graphY;
+    this.graphX = this.config.yAxisLabelWidth + 1 + this.config.sideMargin;
+    this.graphY = this.config.padding + (this.config.title !== undefined ? 1 : 0);
+    this.graphWidth = this.config.width - this.graphX - this.config.sideMargin;
+    this.graphHeight = this.config.height - legendLines - 2 /* x labels, line */ - this.graphY - this.config.padding;
     this.graphRight = this.graphX + this.graphWidth;
     this.graphBottom = this.graphY + this.graphHeight;
   }
@@ -181,29 +197,23 @@ export class AnsiGraph {
     }
 
     // graph lines
-    const graphData = Array<number | undefined>(this.graphWidth * this.graphHeight);
+    const yMult = 2, xMult = 2;
+    const graphData = Array<RGB | undefined>(this.graphWidth * this.graphHeight * yMult * xMult);
 
     const leftColumn = Math.ceil(this.lines.list.length / 2);
     this.lines.list.forEach((ts, i) => {
       const color = this.config.colors[i % this.config.colors.length];
-      this.drawTimeSeries(ts, color, graphData, this.graphWidth, this.graphHeight);
+      this.drawTimeSeries(ts, color, graphData, this.graphWidth * xMult, this.graphHeight * yMult);
 
       if (this.config.showLegend) {
         let x = this.graphX + Math.round(this.graphWidth / 2) * Math.floor(i / leftColumn);
-        let y = this.graphBottom + 2 + (i % leftColumn);
+        let y = this.graphBottom + 2 + (i % leftColumn) + this.config.padding;
         const text = (" " + ts.name).slice(0, Math.round(this.graphWidth / 2) - 4);
         region.at(x, y).backgroundColor(color).write(" ");
         region.backgroundColor(this.config.backgroundColor).color(this.config.labelColor).write(text);
       }
     });
-    for (const x of range(0, this.graphWidth)) {
-      for (const y of range(0, this.graphHeight)) {
-        const rgb = graphData[y * this.graphWidth + x];
-        if (rgb === undefined) continue;
-        const color = antsy.get_color(("000000" + rgb.toString(16)).slice(-6));
-        graphRegion.at(x, y).backgroundColor(color).write(" ");
-      }
-    }
+    this.render4x(graphRegion, graphData);
 
     return canvas.paintInline();
   }
@@ -232,16 +242,73 @@ export class AnsiGraph {
    *   - `fillPercent`: how much (0 - 1) of a cell's volume falls below the
    *     line?
    */
-  drawTimeSeries(ts: TimeSeries, color: string, graphData: (number | undefined)[], width: number, height: number) {
-    const bg = antsy.get_rgb(antsy.get_color(this.config.graphBackgroundColor));
-    const cVal = antsy.get_rgb(antsy.get_color(color));
+  drawTimeSeries(ts: TimeSeries, color: string, graphData: (RGB | undefined)[], width: number, height: number) {
+    const bg = RGB.named(this.config.graphBackgroundColor);
+    const cVal = RGB.named(color);
     const cellData = ts.antialias(width, height, this.top, this.bottom, this.left, this.right);
     const alphas = this.config.fill ? cellData.fillPercent : cellData.widthPercent;
 
     for (const i of range(0, alphas.length)) {
       if (alphas[i] < 0.01) continue;
       const orig = graphData[i] ?? bg;
-      graphData[i] = blend(cVal, orig, alphas[i]);
+      graphData[i] = cVal.blend(orig, alphas[i]);
+    }
+  }
+
+  render(graphRegion: antsy.Region, graphData: (RGB | undefined)[]) {
+    for (const x of range(0, this.graphWidth)) {
+      for (const y of range(0, this.graphHeight)) {
+        const rgb = graphData[y * this.graphWidth + x];
+        if (rgb === undefined) continue;
+        graphRegion.at(x, y).backgroundColor(rgb.toAnsi()).write(" ");
+      }
+    }
+  }
+
+  // blit a double-height graph by using half-height blocks
+  render2x(graphRegion: antsy.Region, graphData: (RGB | undefined)[]) {
+    const bg = RGB.named(this.config.graphBackgroundColor);
+    for (const x of range(0, this.graphWidth)) {
+      for (const y of range(0, this.graphHeight)) {
+        const rgb1 = graphData[y * 2 * this.graphWidth + x];
+        const rgb2 = graphData[(y * 2 + 1) * this.graphWidth + x];
+        if (rgb1 === undefined && rgb2 === undefined) continue;
+        graphRegion.at(x, y).backgroundColor((rgb1 ?? bg).toAnsi()).color((rgb2 ?? bg).toAnsi()).write(CH_HALF[1]);
+      }
+    }
+  }
+
+  // blit a double-height graph by using half-height blocks
+  render4x(graphRegion: antsy.Region, graphData: (RGB | undefined)[]) {
+    const bg = RGB.named(this.config.graphBackgroundColor);
+    const yStride = this.graphWidth * 4;
+    for (const y of range(0, this.graphHeight)) {
+      console.log("y", y);
+      for (const x of range(0, this.graphWidth)) {
+        const rgb1 = graphData[y * yStride + x * 2];
+        const rgb2 = graphData[y * yStride + x * 2 + 1];
+        const rgb3 = graphData[y * yStride + this.graphWidth * 2 + x * 2];
+        const rgb4 = graphData[y * yStride + this.graphWidth * 2 + x * 2 + 1];
+        const coord = [ x * 2, x * 2 + 1, y * yStride, y * yStride + this.graphWidth ];
+        if (rgb1 === undefined && rgb2 === undefined && rgb3 === undefined && rgb4 === undefined) continue;
+
+        const pixel = [ rgb1 ?? bg, rgb2 ?? bg, rgb3 ?? bg, rgb4 ?? bg ];
+        // special case: all 4 are the same color
+        if (
+          pixel[0].number() == pixel[1].number() &&
+          pixel[0].number() == pixel[2].number() &&
+          pixel[0].number() == pixel[3].number()
+        ) {
+          // console.log(`all: ${JSON.stringify(pixel.map(p => p.toHex()))}`);
+          graphRegion.at(x, y).backgroundColor(pixel[0].toAnsi()).write(" ");
+        } else {
+          const pixelQ = quantize4to2(pixel);
+          const colors = [...new Set(pixelQ)];
+          const bits = pixelQ.map((c, i) => (c == colors[1] ? 1 : 0) << (3 - i)).reduce((a, b) => a | b, 0);
+          // console.log({ x, y, w: this.graphWidth, h: this.graphHeight, yStride, coord, pixel, colors, bits, ch: CH_QUARTER[bits] })
+          graphRegion.at(x, y).backgroundColor(colors[0].toAnsi()).color(colors[1].toAnsi()).write(CH_QUARTER[bits]);
+        }
+      }
     }
   }
 
@@ -255,14 +322,6 @@ export class AnsiGraph {
   }
 }
 
-function blend(color1: number, color2: number, alpha: number): number {
-  const nalpha = 1 - alpha;
-  const r1 = (color1 >>> 16) & 0xff, g1 = (color1 >>> 8) & 0xff, b1 = color1 & 0xff;
-  const r2 = (color2 >>> 16) & 0xff, g2 = (color2 >>> 8) & 0xff, b2 = color2 & 0xff;
-  return (Math.round(r1 * alpha + r2 * nalpha) << 16) +
-    (Math.round(g1 * alpha + g2 * nalpha) << 8) +
-    Math.round(b1 * alpha + b2 * nalpha);
-}
 
 // web weenies need an entire module to do this
 const S10 = "          ", S30 = [ S10, S10, S10 ].join(""), S120 = [ S30, S30, S30, S30 ].join("");
