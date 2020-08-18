@@ -193,7 +193,12 @@ export class TimeSeries {
       const direction = prevCell < cell ? 1 : -1;
       prevCell += direction;
       const border = prevCell + (direction == 1 ? 0 : 1);
-      if (border == y) continue;  // don't "interpolate" an existing perfect crossing
+      if (border == y || border == yLeft) {
+        // don't "interpolate" an existing perfect crossing
+        yLeft = y;
+        prevCell = cell;
+        continue;
+      }
       const x = linearInterpolate(yLeft, y, xPoints[i - 1], xPoints[i], border);
 
       xPoints.splice(i, 0, x);
