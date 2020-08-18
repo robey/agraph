@@ -186,8 +186,9 @@ export class AnsiGraph {
     let xScale = xInterval >= YEAR ? TimeScale.YEARS : (xInterval >= DAY ? TimeScale.DAYS : TimeScale.MINUTES);
     for (const x of xLines) {
       const time = luxon.DateTime.fromSeconds(x, { zone: this.options.timezone });
-      const label = this.config.xAxisLabelFormat(time, xScale);
-      const xCell = this.graphX + this.xToCell(x) - Math.floor(label.length / 2);
+      let label = this.config.xAxisLabelFormat(time, xScale);
+      const xCell = Math.max(0, this.graphX + this.xToCell(x) - Math.floor(label.length / 2));
+      if (label.length > this.config.width - xCell) label = label.slice(0, this.config.width - xCell);
       region.at(xCell, this.graphY + this.graphHeight + 1).write(label);
     }
 
