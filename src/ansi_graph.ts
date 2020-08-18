@@ -9,6 +9,12 @@ import { DAY, defaultTimeLabel, TimeBuddy, TimeScale, YEAR } from "./time";
 import { TimeSeries } from "./time_series";
 import { TimeSeriesList } from "./time_series_list";
 
+export enum AnsiGraphResolution {
+  FULL,     // each pixel is one character cell
+  HALF,     // each character cell holds two pixels, a top and bottom half, using unicode block drawing characters
+  QUARTER,  // each character cell holds a 2x2 grid of pixels, using unicode block drawing characters
+}
+
 export interface AnsiGraphConfig {
   title?: string;
 
@@ -39,8 +45,6 @@ export interface AnsiGraphConfig {
   // should the graph be a solid shape filled down?
   fill: boolean;
 
-  titleColor: string;
-
   // customize the x-axis or y-axis labels? and how wide to allow for them?
   xAxisLabelFormat: (time: luxon.DateTime, scale: TimeScale) => string;
   yAxisLabelFormat: (n: number) => string;
@@ -51,12 +55,17 @@ export interface AnsiGraphConfig {
   graphBackgroundColor: string;
   // for drawing grid lines/borders
   gridColor: string;
+  // color for the title at top, if present
+  titleColor: string;
   // color for x/y labels
   labelColor: string;
   // color for legend text
   legendColor: string;
   // color for lines
   colors: string[];
+
+  // how fancy do you want the ansi graphics?
+  resolution: AnsiGraphResolution;
 
   // padding between major boxes, in characters
   padding: number;
@@ -74,7 +83,6 @@ const DEFAULTS: AnsiGraphConfig = {
   height: 24,
   yLines: 5,
   fill: false,
-  titleColor: "#660099",
   xAxisLabelFormat: defaultTimeLabel,
   yAxisLabelFormat: toSI,
   // our labels are about 5 chars wide at most ("12:34", "05/17", "2019")
@@ -83,18 +91,18 @@ const DEFAULTS: AnsiGraphConfig = {
   yAxisLabelWidth: 6,
   graphBackgroundColor: "#eeeeff",
   gridColor: "#555555",
+  titleColor: "#660099",
   labelColor: "#555555",
   legendColor: "#555555",
   colors: DEFAULT_COLORS,
+  resolution: AnsiGraphResolution.QUARTER,
   padding: 1,
   sideMargin: 1,
 };
 
 const CH_V = "\u2502";
-const CH_HV = "\u253c";
 const CH_H = "\u2500";
 const CH_LB = "\u2514";
-// uprightdown: "\u251c",
 const CH_B = "\u2534";
 
 // top, bottom
@@ -172,7 +180,7 @@ export class AnsiGraph {
     region.color(this.config.labelColor);
     for (const y of yLines) {
       const label = lpad(this.config.yAxisLabelFormat(y), this.config.yAxisLabelWidth);
-      region.at(0, this.graphY + this.yToCell(y)).write(label);
+      region.at(this.config.sideMargin, this.graphY + this.yToCell(y)).write(label);
     }
     const xInterval = xLines[1] - xLines[0];
     let xScale = xInterval >= YEAR ? TimeScale.YEARS : (xInterval >= DAY ? TimeScale.DAYS : TimeScale.MINUTES);
@@ -197,7 +205,8 @@ export class AnsiGraph {
     }
 
     // graph lines
-    const yMult = 2, xMult = 2;
+    const yMult = (this.config.resolution == AnsiGraphResolution.FULL) ? 1 : 2;
+    const xMult = (this.config.resolution == AnsiGraphResolution.QUARTER) ? 2 : 1;
     const graphData = Array<RGB | undefined>(this.graphWidth * this.graphHeight * yMult * xMult);
 
     const leftColumn = Math.ceil(this.lines.list.length / 2);
@@ -213,7 +222,18 @@ export class AnsiGraph {
         region.backgroundColor(this.config.backgroundColor).color(this.config.labelColor).write(text);
       }
     });
-    this.render4x(graphRegion, graphData);
+
+    switch (this.config.resolution) {
+      case AnsiGraphResolution.FULL:
+        this.render(graphRegion, graphData);
+        break;
+      case AnsiGraphResolution.HALF:
+        this.render2x(graphRegion, graphData);
+        break;
+      case AnsiGraphResolution.QUARTER:
+        this.render4x(graphRegion, graphData);
+        break;
+    }
 
     return canvas.paintInline();
   }
@@ -283,13 +303,11 @@ export class AnsiGraph {
     const bg = RGB.named(this.config.graphBackgroundColor);
     const yStride = this.graphWidth * 4;
     for (const y of range(0, this.graphHeight)) {
-      console.log("y", y);
       for (const x of range(0, this.graphWidth)) {
         const rgb1 = graphData[y * yStride + x * 2];
         const rgb2 = graphData[y * yStride + x * 2 + 1];
         const rgb3 = graphData[y * yStride + this.graphWidth * 2 + x * 2];
         const rgb4 = graphData[y * yStride + this.graphWidth * 2 + x * 2 + 1];
-        const coord = [ x * 2, x * 2 + 1, y * yStride, y * yStride + this.graphWidth ];
         if (rgb1 === undefined && rgb2 === undefined && rgb3 === undefined && rgb4 === undefined) continue;
 
         const pixel = [ rgb1 ?? bg, rgb2 ?? bg, rgb3 ?? bg, rgb4 ?? bg ];
@@ -299,13 +317,11 @@ export class AnsiGraph {
           pixel[0].number() == pixel[2].number() &&
           pixel[0].number() == pixel[3].number()
         ) {
-          // console.log(`all: ${JSON.stringify(pixel.map(p => p.toHex()))}`);
           graphRegion.at(x, y).backgroundColor(pixel[0].toAnsi()).write(" ");
         } else {
           const pixelQ = quantize4to2(pixel);
           const colors = [...new Set(pixelQ)];
           const bits = pixelQ.map((c, i) => (c == colors[1] ? 1 : 0) << (3 - i)).reduce((a, b) => a | b, 0);
-          // console.log({ x, y, w: this.graphWidth, h: this.graphHeight, yStride, coord, pixel, colors, bits, ch: CH_QUARTER[bits] })
           graphRegion.at(x, y).backgroundColor(colors[0].toAnsi()).color(colors[1].toAnsi()).write(CH_QUARTER[bits]);
         }
       }
