@@ -65,11 +65,11 @@ const INTERVALS: IntervalMath[] = [
     start: d => nextHour(d, h => modCeil(h, 4)),
     next: d => d.hour < 20 ? d.set({ hour: d.hour + 4 }) : d.plus({ day: 1 }).startOf("day"),
   },
-  {
-    interval: 12 * HOUR,
-    start: d => nextHour(d, h => modCeil(h, 12)),
-    next: d => d.hour == 0 ? d.set({ hour: 12 }) : d.plus({ day: 1 }).startOf("day"),
-  },
+  // {
+  //   interval: 12 * HOUR,
+  //   start: d => nextHour(d, h => modCeil(h, 12)),
+  //   next: d => d.hour == 0 ? d.set({ hour: 12 }) : d.plus({ day: 1 }).startOf("day"),
+  // },
   {
     interval: DAY,
     start: d => nextHour(d, h => modCeil(h, 24)),

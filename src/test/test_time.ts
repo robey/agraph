@@ -37,7 +37,7 @@ describe("TimeBuddy", () => {
         range(midnight, midnight + DAY + 1, 4 * HOUR)
       );
       t.timeGranularityFor(midnight - HOUR, midnight + 3 * DAY, 7).should.eql(
-        range(midnight, midnight + 3 * DAY + 1, 12 * HOUR)
+        range(midnight, midnight + 3 * DAY + 1, 24 * HOUR)
       );
       t.timeGranularityFor(midnight - HOUR, midnight + 3 * DAY, 5).should.eql(
         range(midnight, midnight + 3 * DAY + 1, DAY)
@@ -182,11 +182,8 @@ describe("TimeBuddy", () => {
         return luxon.DateTime.fromSeconds(t).toString();
       }).should.eql([
         "2020-03-08T00:00:00.000-08:00",
-        "2020-03-08T12:00:00.000-07:00",
         "2020-03-09T00:00:00.000-07:00",
-        "2020-03-09T12:00:00.000-07:00",
         "2020-03-10T00:00:00.000-07:00",
-        "2020-03-10T12:00:00.000-07:00",
         "2020-03-11T00:00:00.000-07:00",
       ]);
 
