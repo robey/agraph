@@ -20,6 +20,13 @@ describe("RGB", () => {
     red.blend(cyan, 0.5).number().should.eql(0x808180);
   });
 
+  it("blend", () => {
+    const blue = RGB.from(0x0000ff);
+    const offWhite = RGB.from(0xeeeeff);
+    const c = offWhite.blend(blue, 0.341);
+    c.blue.should.eql(0xff);
+  });
+
   it("mix3", () => {
     const c1 = RGB.from(0x660033);
     const c2 = RGB.from(0xccff33);

@@ -41,17 +41,17 @@ export class RGB {
   blend(other: RGB, alpha: number): RGB {
     const nalpha = 1 - alpha;
     return new RGB(
-      Math.ceil(this.red * alpha + other.red * nalpha),
-      Math.ceil(this.green * alpha + other.green * nalpha),
-      Math.ceil(this.blue * alpha + other.blue * nalpha),
+      cap(Math.ceil(this.red * alpha + other.red * nalpha)),
+      cap(Math.ceil(this.green * alpha + other.green * nalpha)),
+      cap(Math.ceil(this.blue * alpha + other.blue * nalpha)),
     );
   }
 
   mix3(c1: RGB, c2: RGB): RGB {
     return new RGB(
-      Math.round(this.red * THIRD + c1.red * THIRD + c2.red * THIRD),
-      Math.round(this.green * THIRD + c1.green * THIRD + c2.green * THIRD),
-      Math.round(this.blue * THIRD + c1.blue * THIRD + c2.blue * THIRD),
+      cap(Math.round(this.red * THIRD + c1.red * THIRD + c2.red * THIRD)),
+      cap(Math.round(this.green * THIRD + c1.green * THIRD + c2.green * THIRD)),
+      cap(Math.round(this.blue * THIRD + c1.blue * THIRD + c2.blue * THIRD)),
     );
   }
 
@@ -97,4 +97,8 @@ export function quantize4to2(colors: RGB[]): RGB[] {
   const other = 6 - triplet[0] - triplet[1] - triplet[2];
   rv[triplet[0]] = rv[triplet[1]] = rv[triplet[2]] = colors[triplet[0]].mix3(colors[triplet[1]], colors[triplet[2]]);
   return rv;
+}
+
+function cap(c: number): number {
+  return Math.max(Math.min(255, c), 0);
 }
