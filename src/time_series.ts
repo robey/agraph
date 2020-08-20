@@ -42,6 +42,22 @@ export class TimeSeries {
     return rv;
   }
 
+  // graphite: [ { target, datapoints: [ [ y, timestamp ], ... ] } ]
+  static fromGraphite(data: { target: string; datapoints: [ MaybeNumber, number ][] }): TimeSeries {
+    const rv = new TimeSeries(data.target);
+    rv.addGraphitePoints(data.datapoints);
+    return rv;
+  }
+
+  static fromPrometheus(data: { metric: { __name__: string }; values: [ number, string ][] }): TimeSeries {
+    const rv = new TimeSeries(data.metric.__name__);
+    rv.addPoints(data.values.map(([ x, yString ]) => {
+      const y = parseFloat(yString);
+      return [ x, isNaN(y) ? undefined : y ];
+    }));
+    return rv;
+  }
+
   // add a set of [timestamp, value] points
   addPoints(points: [ number, MaybeNumber ][]) {
     for (const [ ts, v ] of points) {
@@ -274,15 +290,6 @@ export class TimeSeries {
     const t1 = this.timestamps[left], t2 = this.timestamps[right];
     return (Math.abs(t1 - ts) <= Math.abs(t2 - ts)) ? t1 : t2;
   }
-
-
-
-
-//   # graphite: [ { target, datapoints: [ [ y, timestamp ], ... ] } ]
-//   loadFromGraphite: (data) ->
-//     for item in data then @addPoints(item.target, item.datapoints.map ([y, ts]) -> [ts, y])
-//     @
-
 }
 
 

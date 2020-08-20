@@ -38,6 +38,20 @@ describe("TimeSeries", () => {
     (() => ts.normalize()).should.throw(/too distant/);
   });
 
+  it("fromGraphite", () => {
+    const ts = TimeSeries.fromGraphite({ target: "eggs", datapoints: [ [ 1, 0 ], [ 6, 5 ], [ 0, 10 ] ] });
+    ts.name.should.eql("eggs");
+    ts.timestamps.should.eql([ 0, 5, 10 ]);
+    ts.values.should.eql([ 1, 6, 0 ]);
+  });
+
+  it("fromPrometheus", () => {
+    const values: [ number, string ][] = [ [ 0, "1" ], [ 5, "6" ], [ 10, "0" ], [ 15, "NaN" ] ];
+    const ts = TimeSeries.fromPrometheus({ metric: { __name__: "eggs" }, values });
+    ts.timestamps.should.eql([ 0, 5, 10, 15 ]);
+    ts.values.should.eql([ 1, 6, 0, undefined ]);
+  });
+
   describe("toInterval", () => {
     const ts1 = new TimeSeries("ts1");
     ts1.addPoints([ [ 0, 2 ], [ 3, 5 ], [ 6, 8 ] ]);
