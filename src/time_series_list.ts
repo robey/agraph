@@ -22,4 +22,12 @@ export class TimeSeriesList {
 
     list.forEach(ts => ts.normalize(this.minX, this.maxX, this.interval));
   }
+
+  toCsv(): string {
+    const header = [ "timestamp" ].concat(this.list.map(ts => ts.name));
+    const lines = [ header ].concat(this.list[0].timestamps.map((t, i) => {
+      return [ t.toString() ].concat(this.list.map(ts => ts.values[i]?.toString() ?? "null"));
+    }));
+    return lines.map(line => line.join(",")).join("\n") + "\n";
+  }
 }
