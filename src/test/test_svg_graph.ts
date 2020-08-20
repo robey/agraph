@@ -2,6 +2,7 @@ import * as fs from "fs";
 import { range } from "../arrays";
 import { RrdFile } from "../rrd";
 import { buildSvgGraph, SvgGraphConfig } from "../svg_graph";
+import { DARK_THEME } from "../themes";
 import { TimeSeries } from "../time_series";
 import { TimeSeriesList } from "../time_series_list";
 
@@ -65,7 +66,7 @@ describe("SVG graph", () => {
 
   it("maxY", () => {
     const graph1 = buildSvgGraph(list, {
-      backgroundColor: "white", showLegend: false, maxY: 100, yAxisLabelWidthPt: 2
+      backgroundColor: "white", showLegend: false, maxY: 100, yAxisLabelWidthPt: 2, timezone
     });
     graph1.should.eql(fs.readFileSync("./src/test/data/clip-y.svg").toString());
   });
@@ -87,9 +88,16 @@ describe("SVG graph", () => {
       padding: 0,
       fontSize: 18,
       showTopYLabel: false,
+      timezone,
     };
 
     const graph1 = buildSvgGraph(list, options);
     graph1.should.eql(fs.readFileSync("./src/test/data/dense-rrd.svg").toString());
+  });
+
+  it("dark theme", () => {
+    const options = Object.assign({}, DARK_THEME, { title: "hello", showLegend: true, timezone });
+    const graph = buildSvgGraph(list, options);
+    graph.should.eql(fs.readFileSync("./src/test/data/simple1-dark.svg").toString());
   });
 });

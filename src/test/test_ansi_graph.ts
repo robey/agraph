@@ -1,12 +1,13 @@
 import * as fs from "fs";
 import { buildAnsiGraph, AnsiGraphResolution, AnsiGraphConfig } from "../ansi_graph";
 import { range } from "../arrays";
+import { RrdFile } from "../rrd";
+import { DARK_THEME } from "../themes";
 import { TimeSeries } from "../time_series";
 import { TimeSeriesList } from "../time_series_list";
 
 import "should";
 import "source-map-support/register";
-import { RrdFile } from "../rrd";
 
 describe("ANSI graph", () => {
   // make these tests work, no matter where you are, by forcing LA timezone.
@@ -54,6 +55,7 @@ describe("ANSI graph", () => {
       backgroundColor: "#ffcccc",
       xAxisLabelFormat: (time, scale) => `:${time.minute}min`,
       yAxisLabelFormat: n => `:${n}ms`,
+      timezone,
     };
     const graph = buildAnsiGraph(list, options);
     graph.should.match(/:150ms/);
@@ -62,7 +64,7 @@ describe("ANSI graph", () => {
 
   it("maxY", () => {
     const graph = buildAnsiGraph(list, {
-      backgroundColor: "white", showLegend: false, maxY: 100, yAxisLabelWidth: 2
+      backgroundColor: "white", showLegend: false, maxY: 100, yAxisLabelWidth: 2, timezone
     });
     graph.should.eql(fs.readFileSync("./src/test/data/ansi-clip-y.txt").toString());
   });
@@ -88,5 +90,12 @@ describe("ANSI graph", () => {
 
     const graph = buildAnsiGraph(list, options);
     graph.should.eql(fs.readFileSync("./src/test/data/ansi-rrd.txt").toString());
+  });
+
+  it("dark theme", () => {
+    const options = Object.assign({}, DARK_THEME, { title: "hello", showLegend: true, timezone });
+    const graph = buildAnsiGraph(list, options);
+    fs.writeFileSync("./src/test/data/ansi-dark.txt", graph);
+    graph.should.eql(fs.readFileSync("./src/test/data/ansi-dark.txt").toString());
   });
 });

@@ -1,0 +1,48 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="120mm" height="68mm" viewBox="0 0 800 450" xmlns="http://www.w3.org/2000/svg" version="1.1">
+  <desc>(none)</desc>
+  <defs>
+    <clipPath id="clip-graph-box"><rect x="110" y="60" width="670" height="240"/></clipPath>
+    <clipPath id="clip0"><rect x="135" y="355" width="290" height="25"/></clipPath>
+    <clipPath id="clip1"><rect x="135" y="380" width="290" height="25"/></clipPath>
+    <clipPath id="clip2"><rect x="135" y="405" width="290" height="25"/></clipPath>
+    <clipPath id="clip3"><rect x="470" y="355" width="290" height="25"/></clipPath>
+    <clipPath id="clip4"><rect x="470" y="380" width="290" height="25"/></clipPath>
+  </defs>
+  <rect x="0" y="0" width="800" height="450" stroke="#333355" fill="#333355"/>
+  <rect x="110" y="60" width="670" height="240" stroke="#999999" stroke-width="1" fill="#333355"/>
+  <text x="445" y="40" font-family="sans-serif" font-size="24" font-weight="bold" fill="#ccccff" text-anchor="middle">hello</text>
+  <text x="100" y="307" font-family="monospace" font-size="20" fill="#77cccc" text-anchor="end">0</text>
+  <text x="100" y="67" font-family="monospace" font-size="20" fill="#77cccc" text-anchor="end">170</text>
+  <text x="100" y="236.41" font-family="monospace" font-size="20" fill="#77cccc" text-anchor="end">50</text>
+  <text x="100" y="165.82" font-family="monospace" font-size="20" fill="#77cccc" text-anchor="end">100</text>
+  <text x="100" y="95.24" font-family="monospace" font-size="20" fill="#77cccc" text-anchor="end">150</text>
+  <path d="M 110 300 L 780 300" stroke="#999999" stroke-width="1" fill="none"/>
+  <path d="M 110 60 L 780 60" stroke="#999999" stroke-width="1" fill="none"/>
+  <path d="M 110 229.41 L 780 229.41" stroke="#999999" stroke-width="1" fill="none"/>
+  <path d="M 110 158.82 L 780 158.82" stroke="#999999" stroke-width="1" fill="none"/>
+  <path d="M 110 88.24 L 780 88.24" stroke="#999999" stroke-width="1" fill="none"/>
+  <text x="292.73" y="330" font-family="monospace" font-size="20" fill="#77cccc" text-anchor="middle">21:30</text>
+  <text x="475.45" y="330" font-family="monospace" font-size="20" fill="#77cccc" text-anchor="middle">21:45</text>
+  <text x="658.18" y="330" font-family="monospace" font-size="20" fill="#77cccc" text-anchor="middle">22:00</text>
+  <path d="M 110 60 L 110 300" stroke="#999999" stroke-width="1" fill="none"/>
+  <path d="M 292.73 60 L 292.73 300" stroke="#999999" stroke-width="1" fill="none"/>
+  <path d="M 475.45 60 L 475.45 300" stroke="#999999" stroke-width="1" fill="none"/>
+  <path d="M 658.18 60 L 658.18 300" stroke="#999999" stroke-width="1" fill="none"/>
+  <path d="M 110 158.82 L 170.91 130.59 L 231.82 144.71 L 292.73 116.47 L 353.64 130.59 L 414.55 102.35 L 475.45 116.47 L 536.36 88.24 L 597.27 102.35 L 658.18 130.59 L 719.09 144.71 L 780 116.47" stroke="red" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" fill-opacity="0.5" clip-path="url(#clip-graph-box)"/>
+  <rect x="110" y="360" width="15" height="15" stroke="#999999" stroke-width="1" fill="red"/>
+  <text x="135" y="375" font-family="monospace" font-size="20" fill="#77cccc" clip-path="url(#clip0)">huey</text>
+  <path d="M 110 172.94 L 170.91 158.82 L 231.82 165.88 L 292.73 158.82 L 353.64 151.76 L 414.55 165.88 L 475.45 151.76 L 536.36 144.71 L 597.27 165.88 L 658.18 172.94 L 719.09 165.88 L 780 158.82" stroke="blue" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" fill-opacity="0.5" clip-path="url(#clip-graph-box)"/>
+  <rect x="110" y="385" width="15" height="15" stroke="#999999" stroke-width="1" fill="blue"/>
+  <text x="135" y="400" font-family="monospace" font-size="20" fill="#77cccc" clip-path="url(#clip1)">dewey</text>
+  <path d="M 110 180 L 170.91 180 L 231.82 187.06 L 292.73 187.06 L 353.64 187.06 L 414.55 194.12 L 475.45 194.12 L 536.36 201.18 L 597.27 208.24 L 658.18 208.24 L 719.09 215.29 L 780 222.35" stroke="orange" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" fill-opacity="0.5" clip-path="url(#clip-graph-box)"/>
+  <rect x="110" y="410" width="15" height="15" stroke="#999999" stroke-width="1" fill="orange"/>
+  <text x="135" y="425" font-family="monospace" font-size="20" fill="#77cccc" clip-path="url(#clip2)">louie</text>
+  <path d="M 110 229.41 L 170.91 215.29 L 231.82 201.18 L 292.73 194.12 L 353.64 187.06 L 414.55 180 L 475.45 172.94 L 536.36 158.82 L 597.27 144.71 L 658.18 137.65 L 719.09 123.53 L 780 109.41" stroke="#080" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" fill-opacity="0.5" clip-path="url(#clip-graph-box)"/>
+  <rect x="445" y="360" width="15" height="15" stroke="#999999" stroke-width="1" fill="#080"/>
+  <text x="470" y="375" font-family="monospace" font-size="20" fill="#77cccc" clip-path="url(#clip3)">mickey</text>
+  <path d="M 110 257.65 L 170.91 257.65 L 231.82 250.59 L 292.73 257.65 L 353.64 257.65 L 414.55 250.59 L 475.45 257.65 L 536.36 257.65 L 597.27 250.59 L 658.18 257.65 L 719.09 257.65 L 780 250.59" stroke="#c6c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" fill-opacity="0.5" clip-path="url(#clip-graph-box)"/>
+  <rect x="445" y="385" width="15" height="15" stroke="#999999" stroke-width="1" fill="#c6c"/>
+  <text x="470" y="400" font-family="monospace" font-size="20" fill="#77cccc" clip-path="url(#clip4)">minnie</text>
+</svg>

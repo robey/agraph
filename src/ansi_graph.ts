@@ -4,7 +4,7 @@ import * as luxon from "luxon";
 
 import { range } from "./arrays";
 import { RGB, quantize4to2 } from "./rgb";
-import { DEFAULT_COLORS } from "./themes";
+import { LIGHT_THEME } from "./themes";
 import { DAY, defaultTimeLabel, TimeBuddy, TimeScale, YEAR } from "./time";
 import { TimeSeries } from "./time_series";
 import { TimeSeriesList } from "./time_series_list";
@@ -73,8 +73,7 @@ export interface AnsiGraphConfig {
   sideMargin: number;
 }
 
-const DEFAULTS: AnsiGraphConfig = {
-  backgroundColor: "#335",
+const DEFAULTS: AnsiGraphConfig = Object.assign({}, LIGHT_THEME, {
   showLegend: true,
   scaleToZero: true,
   showTopYLabel: true,
@@ -89,16 +88,10 @@ const DEFAULTS: AnsiGraphConfig = {
   // so 7 gives room for a space on each side
   xAxisLabelWidth: 7,
   yAxisLabelWidth: 6,
-  graphBackgroundColor: "#eeeeff",
-  gridColor: "#555555",
-  titleColor: "#660099",
-  labelColor: "#555555",
-  legendColor: "#555555",
-  colors: DEFAULT_COLORS,
   resolution: AnsiGraphResolution.QUARTER,
   padding: 1,
   sideMargin: 1,
-};
+});
 
 const CH_V = "\u2502";
 const CH_H = "\u2500";

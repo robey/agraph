@@ -3,7 +3,7 @@ import * as luxon from "luxon";
 
 import { range } from "./arrays";
 import { Box, buildSvg, Circle, ClipPath, Line, Rect, Text, ToXml } from "./svg";
-import { DEFAULT_COLORS } from "./themes";
+import { LIGHT_THEME } from "./themes";
 import { DAY, defaultTimeLabel, TimeBuddy, TimeScale, YEAR } from "./time";
 import { TimeSeries } from "./time_series";
 import { TimeSeriesList } from "./time_series_list";
@@ -76,9 +76,8 @@ export interface SvgGraphConfig {
 
   // for drawing the lines on
   graphBackgroundColor: string;
-  // primary and secondary colors for drawing grid lines
+  // for drawing grid guide lines
   gridColor: string;
-  gridColor2: string;
   // color for x/y labels
   labelColor: string;
   // color for legend text
@@ -94,7 +93,7 @@ export interface SvgGraphConfig {
   legendPadding: number;
 }
 
-const DEFAULTS: SvgGraphConfig = {
+const DEFAULTS: SvgGraphConfig = Object.assign({}, LIGHT_THEME, {
   showLegend: true,
   scaleToZero: true,
   showTopYLabel: true,
@@ -111,22 +110,16 @@ const DEFAULTS: SvgGraphConfig = {
   titleFont: "sans-serif",
   titleFontSize: 24,
   titleFontWeight: "bold",
-  titleColor: "#660099",
   xAxisLabelFormat: defaultTimeLabel,
   yAxisLabelFormat: toSI,
   xAxisLabelWidthPt: 5,  // gives a comfy padding to each side
   yAxisLabelWidthPt: 4,  // 4pt is usually enough for 6 chars
   highlights: [],
   graphBackgroundColor: "#eeeeff",
-  gridColor: "#555555",
-  gridColor2: "#bbbbbb",
-  labelColor: "#555555",
-  legendColor: "#555555",
-  colors: DEFAULT_COLORS,
   padding: 20,
   innerPadding: 10,
   legendPadding: 5,
-};
+});
 
 export interface GraphInstant {
   timestamp: number;
